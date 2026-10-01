@@ -42,7 +42,11 @@ fun AppNavigation() {
 
         composable(Rutas.GRANJAS, arguments = listOf(rolArg)) { entry ->
             val rol = entry.arguments?.getString("rol").orEmpty()
-            PantallaPendiente("Granjas ($rol)")
+            GranjasScreen(
+                rol = rol,
+                onBack = { nav.popBackStack() },
+                onGranja = { granjaId -> nav.navigate("galpones/$rol/$granjaId") }
+            )
         }
 
         composable(Rutas.GALPONES, arguments = listOf(rolArg, enteroArg("granjaId"))) {

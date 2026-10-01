@@ -82,6 +82,16 @@ fun PantallaBase(
 }
 
 @Composable
+fun TituloSeccion(titulo: String, descripcion: String? = null) {
+    Text(titulo, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    if (descripcion != null) {
+        Spacer(Modifier.height(4.dp))
+        Text(descripcion, style = MaterialTheme.typography.bodyMedium)
+    }
+    Spacer(Modifier.height(16.dp))
+}
+
+@Composable
 fun CargandoIndicador() {
     Column(
         modifier = Modifier.fillMaxSize(),
