@@ -11,12 +11,14 @@ class FlushingViewModel(
     suspend fun registrarFlushing(
         lineaId: Int,
         usuarioId: Int,
-        fechaHora: String
+        fechaHora: String,
+        observacion: String
     ): Flushing {
         return repo.registrarFlushing(
             lineaId = lineaId,
             usuarioId = usuarioId,
-            fechaHora = fechaHora
+            fechaHora = fechaHora,
+            observacion = observacion
         )
     }
 

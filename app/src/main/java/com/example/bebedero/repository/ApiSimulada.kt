@@ -89,8 +89,8 @@ class ApiSimulada {
         }
 
     private val flushings = mutableListOf(
-        Flushing(id = 1, lineaId = 6, usuarioId = 1, fechaHora = "29/09/2026 16:10"),
-        Flushing(id = 2, lineaId = 12, usuarioId = 1, fechaHora = "29/09/2026 13:40")
+        Flushing(id = 1, lineaId = 6, usuarioId = 1, fechaHora = "29/09/2026 16:10",observacion = "Limpieza realizada correctamente"),
+        Flushing(id = 2, lineaId = 12, usuarioId = 1, fechaHora = "29/09/2026 13:40",observacion = "Flushing realizado sin inconvenientes")
     )
 
     // Simula la latencia de una llamada de red real.
@@ -145,9 +145,9 @@ class ApiSimulada {
         return flushings.toList()
     }
 
-    suspend fun registrarFlushing(lineaId: Int, usuarioId: Int, fechaHora: String): Flushing {
+    suspend fun registrarFlushing(lineaId: Int, usuarioId: Int, fechaHora: String,observacion: String): Flushing {
         latenciaRed()
-        val registro = Flushing(id = flushings.size + 1, lineaId = lineaId, usuarioId = usuarioId, fechaHora = fechaHora)
+        val registro = Flushing(id = flushings.size + 1, lineaId = lineaId, usuarioId = usuarioId, fechaHora = fechaHora,observacion = observacion)
         flushings.add(0, registro)
         return registro
     }

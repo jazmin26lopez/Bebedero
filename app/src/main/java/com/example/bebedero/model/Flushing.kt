@@ -7,5 +7,7 @@ data class Flushing(
     val id: Int,
     val lineaId: Int,
     val usuarioId: Int,
-    val fechaHora: String
+    val fechaHora: String,
+    val observacion: String
+
 )

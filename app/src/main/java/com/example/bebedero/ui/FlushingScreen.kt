@@ -10,6 +10,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,6 +36,15 @@ fun FlushingScreen(
     onCancelar: () -> Unit,
     flushingViewModel: FlushingViewModel = viewModel()
 ) {
+
+    var observacion by remember {
+        mutableStateOf("")
+    }
+
+    var errorObservacion by remember {
+        mutableStateOf(false)
+    }
+
     var mostrarConfirmacion by remember {
         mutableStateOf(false)
     }
@@ -88,15 +98,79 @@ fun FlushingScreen(
         }
 
         Spacer(
-            modifier = Modifier.height(24.dp)
+            modifier = Modifier.height(20.dp)
         )
 
         if (!mostrarConfirmacion) {
 
+            Text(
+                text = "Observación *",
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
+
+            OutlinedTextField(
+                value = observacion,
+
+                onValueChange = {
+                    observacion = it
+
+                    // Al comenzar a escribir desaparece el error
+                    if (it.isNotBlank()) {
+                        errorObservacion = false
+                    }
+                },
+
+                label = {
+                    Text("Ingrese una observación")
+                },
+
+                placeholder = {
+                    Text("Ej: Limpieza realizada sin inconvenientes")
+                },
+
+                modifier = Modifier.fillMaxWidth(),
+
+                minLines = 3,
+                maxLines = 5,
+
+                // Pone el borde del campo en rojo
+                isError = errorObservacion,
+
+                // Mensaje debajo del campo
+                supportingText = {
+
+                    if (errorObservacion) {
+
+                        Text(
+                            text = "Debe completar este campo",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            )
+
+            Spacer(
+                modifier = Modifier.height(20.dp)
+            )
+
             Button(
                 onClick = {
-                    mostrarConfirmacion = true
-                    mensajeError = null
+
+                    if (observacion.isBlank()) {
+
+                        // Activa borde rojo + mensaje
+                        errorObservacion = true
+
+                    } else {
+
+                        errorObservacion = false
+                        mensajeError = null
+                        mostrarConfirmacion = true
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -117,9 +191,50 @@ fun FlushingScreen(
         } else {
 
             Text(
-                text = "¿Confirmas que deseas registrar el flushing?",
+                text = "Confirmar registro",
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+
+            Spacer(
+                modifier = Modifier.height(10.dp)
+            )
+
+            Text(
+                text = "¿Confirmas que deseas registrar el flushing?"
+            )
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+
+                    Text(
+                        text = "Línea: $lineaId"
+                    )
+
+                    Text(
+                        text = "Usuario: Operario Demo"
+                    )
+
+                    Text(
+                        text = "Observación:"
+                    )
+
+                    Text(
+                        text = observacion,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
             Spacer(
                 modifier = Modifier.height(16.dp)
@@ -150,7 +265,8 @@ fun FlushingScreen(
                                     flushingViewModel.registrarFlushing(
                                         lineaId = lineaId,
                                         usuarioId = 1,
-                                        fechaHora = fechaHora
+                                        fechaHora = fechaHora,
+                                        observacion = observacion.trim()
                                     )
 
                                 onRegistrado(flushing)
@@ -158,7 +274,7 @@ fun FlushingScreen(
                             } catch (e: Exception) {
 
                                 mensajeError =
-                                    "No se pudo registrar el flushing."
+                                    "No se pudo registrar el flushing. Intente nuevamente."
 
                             } finally {
 
