@@ -123,8 +123,25 @@ fun AppNavigation() {
                 rolArg,
                 enteroArg("galponId")
             )
-        ) {
-            PantallaPendiente("Líneas")
+        ) { entry ->
+
+            val rol =
+                entry.arguments?.getString("rol").orEmpty()
+
+            val galponId =
+                entry.arguments?.getInt("galponId") ?: 0
+
+            LineasScreen(
+                galponId = galponId,
+                onBack = {
+                    nav.popBackStack()
+                },
+                onLinea = { lineaId ->
+                    nav.navigate(
+                        "detalle/$rol/$lineaId"
+                    )
+                }
+            )
         }
 
         // -------------------------
