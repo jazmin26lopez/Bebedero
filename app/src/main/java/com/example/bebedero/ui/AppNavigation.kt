@@ -154,8 +154,26 @@ fun AppNavigation() {
                 rolArg,
                 enteroArg("lineaId")
             )
-        ) {
-            PantallaPendiente("Detalle de línea")
+        ) { entry ->
+
+            val rol =
+                entry.arguments?.getString("rol").orEmpty()
+
+            val lineaId =
+                entry.arguments?.getInt("lineaId") ?: 0
+
+            DetalleLineaScreen(
+                rol = rol,
+                lineaId = lineaId,
+                onBack = {
+                    nav.popBackStack()
+                },
+                onRegistrarFlushing = {
+                    nav.navigate(
+                        "flushing/$lineaId"
+                    )
+                }
+            )
         }
 
         // -------------------------

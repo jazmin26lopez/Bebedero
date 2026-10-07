@@ -25,11 +25,7 @@ class BebederoRepository(
         api.obtenerGalpones(granjaId)
 
     suspend fun obtenerGalpon(id: Int): Galpon =
-        api.obtenerGranjas()
-            .flatMap { granja ->
-                api.obtenerGalpones(granja.id)
-            }
-            .first { it.id == id }
+        api.obtenerGalpon(id)
 
     suspend fun obtenerLineas(galponId: Int): List<LineaBebedero> =
         api.obtenerLineas(galponId)

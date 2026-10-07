@@ -106,6 +106,11 @@ class ApiSimulada {
         return galpones.filter { it.granjaId == granjaId }
     }
 
+    suspend fun obtenerGalpon(id: Int): Galpon {
+        latenciaRed()
+        return galpones.first { it.id == id }
+    }
+
     suspend fun obtenerLineas(galponId: Int): List<LineaBebedero> {
         latenciaRed()
         return lineas.filter { it.galponId == galponId }
