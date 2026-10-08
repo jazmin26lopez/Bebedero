@@ -86,18 +86,23 @@ class BebederoRepository(
         api.obtenerHistorial(lineaId)
 
     suspend fun obtenerFlushings(): List<Flushing> =
-        api.obtenerFlushings()
-
+        dao.obtenerFlushings().map { it.aDominio() }
     suspend fun registrarFlushing(
         lineaId: Int,
         usuarioId: Int,
         fechaHora: String,
         observacion: String
-    ): Flushing =
-        api.registrarFlushing(
+    ): Flushing {
+        val nuevoFlushing = Flushing(
+            id = 0,
             lineaId = lineaId,
             usuarioId = usuarioId,
             fechaHora = fechaHora,
             observacion = observacion
         )
+        val idGenerado = dao.guardarFlushing(
+            nuevoFlushing.aEntity()
+        )
+        return nuevoFlushing.copy(id = idGenerado.toInt())
+    }
 }

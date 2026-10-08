@@ -1,3 +1,4 @@
+
 package com.example.bebedero.repository.local
 
 import androidx.room.Dao
@@ -8,11 +9,15 @@ import androidx.room.Query
 @Dao
 interface BebederoDao {
 
+    // GRANJAS
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardarGranjas(granjas: List<GranjaEntity>)
 
     @Query("SELECT * FROM granjas_cache")
     suspend fun obtenerGranjas(): List<GranjaEntity>
+
+    // GALPONES
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardarGalpones(galpones: List<GalponEntity>)
@@ -22,6 +27,8 @@ interface BebederoDao {
 
     @Query("SELECT * FROM galpones_cache WHERE id = :id")
     suspend fun obtenerGalpon(id: Int): GalponEntity?
+
+    // LÍNEAS DE BEBEDEROS
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardarLineas(lineas: List<LineaBebederoEntity>)
@@ -34,4 +41,12 @@ interface BebederoDao {
 
     @Query("SELECT * FROM lineas_cache WHERE id = :id")
     suspend fun obtenerLinea(id: Int): LineaBebederoEntity?
+
+    // REGISTROS DE FLUSHING - HU-07
+
+    @Insert
+    suspend fun guardarFlushing(flushing: FlushingEntity): Long
+
+    @Query("SELECT * FROM flushings ORDER BY id DESC")
+    suspend fun obtenerFlushings(): List<FlushingEntity>
 }
