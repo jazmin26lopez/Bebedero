@@ -31,4 +31,9 @@ class ConsultaViewModel(
     suspend fun historial(lineaId: Int): List<MedicionTemperatura> =
         repo.obtenerHistorial(lineaId)
 
+
+    suspend fun todasLasLineas(): List<LineaBebedero> =
+        repo.obtenerTodasLasLineas()
+
+
 }

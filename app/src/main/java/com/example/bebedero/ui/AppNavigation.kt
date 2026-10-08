@@ -10,6 +10,9 @@ import androidx.navigation.navArgument
 import androidx.compose.foundation.layout.fillMaxSize
 object Rutas {
     const val INICIO = "inicio"
+
+    const val RESUMEN_SUPERVISOR = "resumenSupervisor"
+
     const val GRANJAS = "granjas/{rol}"
     const val GALPONES = "galpones/{rol}/{granjaId}"
     const val LINEAS = "lineas/{rol}/{galponId}"
@@ -54,7 +57,7 @@ fun AppNavigation() {
                     nav.navigate("granjas/operario")
                 },
                 onSupervisor = {
-                    nav.navigate("granjas/supervisor")
+                    nav.navigate(Rutas.RESUMEN_SUPERVISOR)
                 }
             )
         }
@@ -280,6 +283,24 @@ fun AppNavigation() {
                 }
             )
         }
+
+        // -------------------------
+        // RESUMEN GENERAL SUPERVISOR
+        // -------------------------
+
+        composable(Rutas.RESUMEN_SUPERVISOR) {
+            ResumenSupervisorScreen(
+                onVerGranjas = {
+                    nav.navigate("granjas/supervisor")
+                },
+                onVerEventosCriticos = {
+                    // Pendiente: conectar HU-05
+
+                }
+            )
+        }
+
+
     }
 }
 
