@@ -23,6 +23,7 @@ object Rutas {
     const val CONFIRMACION_FLUSHING =
         "confirmacionFlushing/{flushingId}/{lineaId}/{fechaHora}"
     const val HISTORIAL = "historial/{lineaId}"
+    const val EVENTOS_CRITICOS = "eventosCriticos"
 
 }
 
@@ -294,8 +295,19 @@ fun AppNavigation() {
                     nav.navigate("granjas/supervisor")
                 },
                 onVerEventosCriticos = {
-                    // Pendiente: conectar HU-05
+                        nav.navigate(Rutas.EVENTOS_CRITICOS)
+                }
+            )
+        }
 
+        // -------------------------
+        // EVENTOS CRÍTICOS - HU-05
+        // -------------------------
+
+        composable(Rutas.EVENTOS_CRITICOS) {
+            EventosCriticosScreen(
+                onVerDetalle = { lineaId ->
+                    nav.navigate("detalle/supervisor/$lineaId")
                 }
             )
         }
@@ -303,7 +315,6 @@ fun AppNavigation() {
 
     }
 }
-
 @Composable
 fun PantallaPendiente(
     titulo: String

@@ -6,6 +6,11 @@ import com.example.bebedero.model.Granja
 import com.example.bebedero.model.LineaBebedero
 import com.example.bebedero.repository.BebederoRepository
 import com.example.bebedero.model.MedicionTemperatura
+import com.example.bebedero.model.EstadoTemperatura
+
+
+
+
 /**
  * Centraliza el acceso al Repository para el flujo de consulta
  * (Granjas -> Galpones -> Lineas -> Detalle). La UI nunca llama al
@@ -34,6 +39,26 @@ class ConsultaViewModel(
 
     suspend fun todasLasLineas(): List<LineaBebedero> =
         repo.obtenerTodasLasLineas()
+
+
+    suspend fun todosLosGalpones(): List<Galpon> {
+        val granjas = repo.obtenerGranjas()
+
+        return granjas.flatMap { granja ->
+            repo.obtenerGalpones(granja.id)
+        }
+    }
+
+    suspend fun eventosCriticos(): List<LineaBebedero> {
+        return repo.obtenerTodasLasLineas()
+            .filter { it.estado != EstadoTemperatura.NORMAL }
+            .sortedWith(
+                compareBy<LineaBebedero> {
+                    if (it.estado == EstadoTemperatura.CRITICO) 0 else 1
+                }.thenBy { it.id }
+            )
+    }
+
 
 
 }
