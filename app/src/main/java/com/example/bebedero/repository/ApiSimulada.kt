@@ -45,22 +45,28 @@ class ApiSimulada {
 
     // Excepciones al valor normal: galponId a numero de linea a temperatura.
     private val excepciones = mapOf(
-        (2 to 3) to 31.5,
-        (4 to 2) to 28.7,
-        (6 to 1) to 29.2
+        (1 to 1) to 18.5,  // Normal
+        (2 to 3) to 32.5,  // Crítico por temperatura alta
+        (4 to 2) to 25.7,  // Advertencia
+        (6 to 1) to 12.8   // Crítico por temperatura baja
     )
 
     private fun estadoDe(temperatura: Double): EstadoTemperatura = when {
-        temperatura >= 31.0 -> EstadoTemperatura.CRITICO
-        temperatura >= 28.0 -> EstadoTemperatura.ADVERTENCIA
-        else -> EstadoTemperatura.NORMAL
+        temperatura < 15.0 || temperatura > 30.0 ->
+            EstadoTemperatura.CRITICO
+
+        temperatura > 21.0 ->
+            EstadoTemperatura.ADVERTENCIA
+
+        else ->
+            EstadoTemperatura.NORMAL
     }
 
     private val lineas: List<LineaBebedero> = buildList {
         var id = 1
         galpones.forEach { galpon ->
             for (n in 1..3) {
-                val normal = 24.5 + ((galpon.id * 3 + n) % 5) * 0.6
+                val normal = 17.0 + ((galpon.id * 3 + n) % 5) * 0.8
                 val temperatura = excepciones[galpon.id to n] ?: normal
                 add(
                     LineaBebedero(
@@ -129,11 +135,21 @@ class ApiSimulada {
     suspend fun obtenerHistorial(lineaId: Int): List<MedicionTemperatura> {
         latenciaRed()
         val linea = lineas.first { it.id == lineaId }
-        val variaciones = when (linea.estado) {
-            EstadoTemperatura.CRITICO -> listOf(0.0, -2.8, -5.1, -5.7)
-            EstadoTemperatura.ADVERTENCIA -> listOf(0.0, -1.4, -2.2, -2.6)
-            EstadoTemperatura.NORMAL -> listOf(0.0, -0.4, 0.2, -0.6)
+
+        val variaciones = when {
+            linea.temperaturaActual < 15.0 ->
+                listOf(0.0, 2.4, 4.1, 5.2)
+
+            linea.temperaturaActual > 30.0 ->
+                listOf(0.0, -2.8, -5.1, -5.7)
+
+            linea.estado == EstadoTemperatura.ADVERTENCIA ->
+                listOf(0.0, -1.4, -2.2, -2.6)
+
+            else ->
+                listOf(0.0, -0.4, 0.2, -0.6)
         }
+
         val horas = listOf("16:30", "15:30", "14:30", "13:30")
         return variaciones.indices.map { i ->
             MedicionTemperatura(

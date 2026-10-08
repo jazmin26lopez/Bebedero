@@ -19,6 +19,8 @@ object Rutas {
     const val FLUSHING = "flushing/{lineaId}"
     const val CONFIRMACION_FLUSHING =
         "confirmacionFlushing/{flushingId}/{lineaId}/{fechaHora}"
+    const val HISTORIAL = "historial/{lineaId}"
+
 }
 
 @Composable
@@ -172,9 +174,35 @@ fun AppNavigation() {
                     nav.navigate(
                         "flushing/$lineaId"
                     )
+                },
+                onVerHistorial = {
+                    nav.navigate("historial/$lineaId")
                 }
             )
         }
+
+        // -------------------------
+        // HISTORIAL DE TEMPERATURAS
+        // -------------------------
+
+        composable(
+            route = Rutas.HISTORIAL,
+            arguments = listOf(
+                enteroArg("lineaId")
+            )
+        ) { entry ->
+
+            val lineaId =
+                entry.arguments?.getInt("lineaId") ?: 0
+
+            HistorialTemperaturaScreen(
+                lineaId = lineaId,
+                onBack = {
+                    nav.popBackStack()
+                }
+            )
+        }
+
 
         // -------------------------
         // REGISTRAR FLUSHING

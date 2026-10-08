@@ -31,7 +31,8 @@ fun DetalleLineaScreen(
     lineaId: Int,
     viewModel: ConsultaViewModel = viewModel(),
     onBack: () -> Unit,
-    onRegistrarFlushing: () -> Unit
+    onRegistrarFlushing: () -> Unit,
+    onVerHistorial:()-> Unit
 ) {
     val linea by produceState<LineaBebedero?>(initialValue = null, key1 = lineaId) {
         value = viewModel.linea(lineaId)
@@ -90,8 +91,18 @@ fun DetalleLineaScreen(
                     Text("Registrar flushing")
                 }
             }
-            // Para Supervisor: el boton "Ver historial" lo agrega Jazmin cuando
-            // construya esa pantalla (HU-06).
+
+            if (rol == "supervisor") {
+                Button(
+                    onClick = onVerHistorial,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                ) {
+                    Text("Ver historial de temperaturas")
+                }
+            }
+
         }
     }
 }
