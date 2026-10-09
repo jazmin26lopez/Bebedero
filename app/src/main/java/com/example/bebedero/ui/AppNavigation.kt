@@ -1,16 +1,28 @@
+
 package com.example.bebedero.ui
 
+import android.content.Context
 import android.net.Uri
+import android.util.Log
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.example.bebedero.TemperaturaWorker
+import com.example.bebedero.repository.BebederoRepository
+import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
+
 object Rutas {
     const val INICIO = "inicio"
-
     const val RESUMEN_SUPERVISOR = "resumenSupervisor"
 
     const val GRANJAS = "granjas/{rol}"
@@ -18,13 +30,12 @@ object Rutas {
     const val LINEAS = "lineas/{rol}/{galponId}"
     const val DETALLE = "detalle/{rol}/{lineaId}"
 
-    // Rutas de Flushing
     const val FLUSHING = "flushing/{lineaId}"
     const val CONFIRMACION_FLUSHING =
         "confirmacionFlushing/{flushingId}/{lineaId}/{fechaHora}"
+
     const val HISTORIAL = "historial/{lineaId}"
     const val EVENTOS_CRITICOS = "eventosCriticos"
-
     const val HISTORIAL_FLUSHING = "historialFlushing"
 }
 
@@ -32,6 +43,8 @@ object Rutas {
 fun AppNavigation() {
 
     val nav = rememberNavController()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     val rolArg = navArgument("rol") {
         type = NavType.StringType
@@ -48,26 +61,43 @@ fun AppNavigation() {
         startDestination = Rutas.INICIO
     ) {
 
-        // -------------------------
         // INICIO
-        // -------------------------
-
         composable(Rutas.INICIO) {
-
             InicioScreen(
                 onOperario = {
+                    configurarNotificacionesRol(
+                        context = context,
+                        rol = "operario"
+                    )
+
                     nav.navigate("granjas/operario")
                 },
+
                 onSupervisor = {
+                    configurarNotificacionesRol(
+                        context = context,
+                        rol = "supervisor"
+                    )
+
                     nav.navigate(Rutas.RESUMEN_SUPERVISOR)
+
+                    scope.launch {
+                        try {
+                            BebederoRepository()
+                                .actualizarNotificacionFlushing()
+                        } catch (e: Exception) {
+                            Log.e(
+                                "Bebedero",
+                                "Error al actualizar contador de flushing",
+                                e
+                            )
+                        }
+                    }
                 }
             )
         }
 
-        // -------------------------
         // GRANJAS
-        // -------------------------
-
         composable(
             route = Rutas.GRANJAS,
             arguments = listOf(rolArg)
@@ -82,17 +112,12 @@ fun AppNavigation() {
                     nav.popBackStack()
                 },
                 onGranja = { granjaId ->
-                    nav.navigate(
-                        "galpones/$rol/$granjaId"
-                    )
+                    nav.navigate("galpones/$rol/$granjaId")
                 }
             )
         }
 
-        // -------------------------
         // GALPONES
-        // -------------------------
-
         composable(
             route = Rutas.GALPONES,
             arguments = listOf(
@@ -113,17 +138,12 @@ fun AppNavigation() {
                     nav.popBackStack()
                 },
                 onGalpon = { galponId ->
-                    nav.navigate(
-                        "lineas/$rol/$galponId"
-                    )
+                    nav.navigate("lineas/$rol/$galponId")
                 }
             )
         }
 
-        // -------------------------
         // LÍNEAS
-        // -------------------------
-
         composable(
             route = Rutas.LINEAS,
             arguments = listOf(
@@ -144,17 +164,12 @@ fun AppNavigation() {
                     nav.popBackStack()
                 },
                 onLinea = { lineaId ->
-                    nav.navigate(
-                        "detalle/$rol/$lineaId"
-                    )
+                    nav.navigate("detalle/$rol/$lineaId")
                 }
             )
         }
 
-        // -------------------------
         // DETALLE DE LÍNEA
-        // -------------------------
-
         composable(
             route = Rutas.DETALLE,
             arguments = listOf(
@@ -176,9 +191,7 @@ fun AppNavigation() {
                     nav.popBackStack()
                 },
                 onRegistrarFlushing = {
-                    nav.navigate(
-                        "flushing/$lineaId"
-                    )
+                    nav.navigate("flushing/$lineaId")
                 },
                 onVerHistorial = {
                     nav.navigate("historial/$lineaId")
@@ -186,10 +199,7 @@ fun AppNavigation() {
             )
         }
 
-        // -------------------------
         // HISTORIAL DE TEMPERATURAS
-        // -------------------------
-
         composable(
             route = Rutas.HISTORIAL,
             arguments = listOf(
@@ -208,11 +218,7 @@ fun AppNavigation() {
             )
         }
 
-
-        // -------------------------
         // REGISTRAR FLUSHING
-        // -------------------------
-
         composable(
             route = Rutas.FLUSHING,
             arguments = listOf(
@@ -225,7 +231,6 @@ fun AppNavigation() {
 
             FlushingScreen(
                 lineaId = lineaId,
-
                 onRegistrado = { flushing ->
 
                     val fechaCodificada =
@@ -238,17 +243,13 @@ fun AppNavigation() {
                                 fechaCodificada
                     )
                 },
-
                 onCancelar = {
                     nav.popBackStack()
                 }
             )
         }
 
-        // -------------------------
-        // CONFIRMACIÓN FLUSHING
-        // -------------------------
-
+        // CONFIRMACIÓN DE FLUSHING
         composable(
             route = Rutas.CONFIRMACION_FLUSHING,
             arguments = listOf(
@@ -286,17 +287,15 @@ fun AppNavigation() {
             )
         }
 
-        // -------------------------
-        // RESUMEN GENERAL SUPERVISOR
-        // -------------------------
-
+        // RESUMEN DEL SUPERVISOR
         composable(Rutas.RESUMEN_SUPERVISOR) {
+
             ResumenSupervisorScreen(
                 onVerGranjas = {
                     nav.navigate("granjas/supervisor")
                 },
                 onVerEventosCriticos = {
-                        nav.navigate(Rutas.EVENTOS_CRITICOS)
+                    nav.navigate(Rutas.EVENTOS_CRITICOS)
                 },
                 onVerHistorialFlushing = {
                     nav.navigate(Rutas.HISTORIAL_FLUSHING)
@@ -304,33 +303,69 @@ fun AppNavigation() {
             )
         }
 
-        // -------------------------
-        // EVENTOS CRÍTICOS - HU-05
-        // -------------------------
+        // EVENTOS CRÍTICOS
         composable(Rutas.EVENTOS_CRITICOS) {
+
             EventosCriticosScreen(
                 onVerDetalle = { lineaId ->
                     nav.navigate("detalle/supervisor/$lineaId")
                 }
             )
         }
-        // -------------------------
+
         // HISTORIAL DE FLUSHING
-        // -------------------------
         composable(Rutas.HISTORIAL_FLUSHING) {
             HistorialFlushingScreen()
         }
     }
 }
+
+// CONFIGURACIÓN DE NOTIFICACIONES SEGÚN ROL
+private fun configurarNotificacionesRol(
+    context: Context,
+    rol: String
+) {
+
+    val preferencias = context.getSharedPreferences(
+        "bebedero_configuracion",
+        Context.MODE_PRIVATE
+    )
+
+    preferencias.edit()
+        .putString("rol_actual", rol)
+        .apply()
+
+    val workManager = WorkManager.getInstance(context)
+
+    if (rol == "operario") {
+
+        val solicitud =
+            PeriodicWorkRequestBuilder<TemperaturaWorker>(
+                15,
+                TimeUnit.MINUTES
+            ).build()
+
+        workManager.enqueueUniquePeriodicWork(
+            "revision_temperatura_bebedero",
+            ExistingPeriodicWorkPolicy.KEEP,
+            solicitud
+        )
+
+    } else {
+
+        workManager.cancelUniqueWork(
+            "revision_temperatura_bebedero"
+        )
+    }
+}
+
 @Composable
 fun PantallaPendiente(
     titulo: String
 ) {
     androidx.compose.foundation.layout.Box(
-        modifier = androidx.compose.ui.Modifier
-            .fillMaxSize(),
-        contentAlignment =
-            androidx.compose.ui.Alignment.Center
+        modifier = androidx.compose.ui.Modifier.fillMaxSize(),
+        contentAlignment = androidx.compose.ui.Alignment.Center
     ) {
         androidx.compose.material3.Text(
             text = "$titulo - En construcción"
