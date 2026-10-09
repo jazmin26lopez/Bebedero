@@ -25,6 +25,7 @@ object Rutas {
     const val HISTORIAL = "historial/{lineaId}"
     const val EVENTOS_CRITICOS = "eventosCriticos"
 
+    const val HISTORIAL_FLUSHING = "historialFlushing"
 }
 
 @Composable
@@ -296,6 +297,9 @@ fun AppNavigation() {
                 },
                 onVerEventosCriticos = {
                         nav.navigate(Rutas.EVENTOS_CRITICOS)
+                },
+                onVerHistorialFlushing = {
+                    nav.navigate(Rutas.HISTORIAL_FLUSHING)
                 }
             )
         }
@@ -303,7 +307,6 @@ fun AppNavigation() {
         // -------------------------
         // EVENTOS CRÍTICOS - HU-05
         // -------------------------
-
         composable(Rutas.EVENTOS_CRITICOS) {
             EventosCriticosScreen(
                 onVerDetalle = { lineaId ->
@@ -311,8 +314,12 @@ fun AppNavigation() {
                 }
             )
         }
-
-
+        // -------------------------
+        // HISTORIAL DE FLUSHING
+        // -------------------------
+        composable(Rutas.HISTORIAL_FLUSHING) {
+            HistorialFlushingScreen()
+        }
     }
 }
 @Composable

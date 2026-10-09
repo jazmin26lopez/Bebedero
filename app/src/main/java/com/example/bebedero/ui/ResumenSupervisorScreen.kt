@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -30,9 +31,9 @@ import com.example.bebedero.viewmodel.ConsultaViewModel
 fun ResumenSupervisorScreen(
     onVerGranjas: () -> Unit,
     onVerEventosCriticos: () -> Unit,
+    onVerHistorialFlushing: () -> Unit,
     viewModel: ConsultaViewModel = viewModel()
 ) {
-    // Consultar información general
     val granjas by produceState<List<Granja>?>(initialValue = null) {
         value = viewModel.granjas()
     }
@@ -41,7 +42,6 @@ fun ResumenSupervisorScreen(
         value = viewModel.todasLasLineas()
     }
 
-    // Calcular indicadores
     val totalGranjas = granjas?.size ?: 0
     val totalLineas = lineas?.size ?: 0
 
@@ -61,10 +61,12 @@ fun ResumenSupervisorScreen(
 
     PantallaBase(
         titulo = "Monitoreo de Bebederos",
-        subtitulo = "Supervisor"
+        subtitulo = ""
     ) {
         Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
@@ -82,9 +84,8 @@ fun ResumenSupervisorScreen(
                 CargandoIndicador()
             } else {
 
-                // --------------------------------
                 // RESUMEN GENERAL
-                // --------------------------------
+
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -103,9 +104,8 @@ fun ResumenSupervisorScreen(
                     )
                 }
 
-                // --------------------------------
-                // PRIORIDAD: EVENTOS CRÍTICOS
-                // --------------------------------
+                // EVENTOS QUE REQUIEREN ATENCIÓN
+
                 Card(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -161,9 +161,8 @@ fun ResumenSupervisorScreen(
                     }
                 }
 
-                // --------------------------------
                 // LÍNEAS EN ESTADO NORMAL
-                // --------------------------------
+
                 TarjetaIndicador(
                     titulo = "Líneas en estado normal",
                     cantidad = totalNormales,
@@ -171,9 +170,8 @@ fun ResumenSupervisorScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // --------------------------------
-                // CONSULTA GENERAL DE GRANJAS
-                // --------------------------------
+                // CONSULTA GENERAL
+
                 Text(
                     text = "Consulta general",
                     style = MaterialTheme.typography.titleLarge,
@@ -190,6 +188,26 @@ fun ResumenSupervisorScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Ver granjas")
+                }
+
+                // HISTORIAL DE FLUSHING - HU-07
+
+                Text(
+                    text = "Registros de flushing",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = "Consulta de los registros de flushing realizados por los operarios.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                OutlinedButton(
+                    onClick = onVerHistorialFlushing,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Ver historial de flushing")
                 }
             }
         }

@@ -10,6 +10,7 @@ import com.example.bebedero.repository.local.BebederoDao
 import com.example.bebedero.repository.local.BebederoDatabase
 import com.example.bebedero.repository.local.aDominio
 import com.example.bebedero.repository.local.aEntity
+import com.example.bebedero.model.Usuario
 
 /**
  * Unica fuente de datos para el ViewModel: llama a [ApiSimulada] y guarda lo
@@ -105,4 +106,8 @@ class BebederoRepository(
         )
         return nuevoFlushing.copy(id = idGenerado.toInt())
     }
+
+    suspend fun obtenerUsuario(id: Int): Usuario =
+        api.obtenerUsuario(id)
+
 }

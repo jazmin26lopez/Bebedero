@@ -59,6 +59,7 @@ fun EstadoChip(estado: EstadoTemperatura) {
 }
 
 /** Estructura comun de pantalla: barra superior con titulo/subtitulo + contenido. */
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaBase(
@@ -66,20 +67,38 @@ fun PantallaBase(
     subtitulo: String,
     contenido: @Composable () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
         TopAppBar(
             title = {
                 Column {
-                    Text(titulo, fontWeight = FontWeight.Bold)
-                    Text(subtitulo, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        text = titulo,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    if (subtitulo.isNotBlank()) {
+                        Text(
+                            text = subtitulo,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
         )
-        Column(modifier = Modifier.padding(16.dp)) {
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
             contenido()
         }
     }
 }
+
 
 @Composable
 fun TituloSeccion(titulo: String, descripcion: String? = null) {
