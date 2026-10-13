@@ -249,7 +249,8 @@ fun TarjetaNavegacion(
 
 /**
  * Tarjeta de una línea monitoreada.
- * Conserva el color del estado de temperatura.
+ * Mismo estilo azul que TarjetaNavegacion; conserva el chip de estado
+ * de temperatura (Normal/Advertencia/Crítico) para que siga destacando.
  */
 @Composable
 fun TarjetaLinea(
@@ -269,35 +270,40 @@ fun TarjetaLinea(
         label = "AnimacionTarjetaLinea"
     )
 
-    Card(
+    val forma = RoundedCornerShape(14.dp)
+
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
-            .scale(escala),
-        onClick = onClick,
-        interactionSource = interaccion
+            .scale(escala)
+            .shadow(3.dp, forma)
+            .clip(forma)
+            .background(AzulBebederoComponentes)
+            .clickable(
+                interactionSource = interaccion,
+                indication = null,
+                onClick = onClick
+            )
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = nombre,
-                    fontWeight = FontWeight.Bold
-                )
+        Column {
+            Text(
+                text = nombre,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
 
-                Text(
-                    text = "%.1f °C".format(temperatura),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            EstadoChip(estado)
+            Text(
+                text = "%.1f °C".format(temperatura),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.90f)
+            )
         }
+
+        EstadoChip(estado)
     }
 }
 
