@@ -9,7 +9,13 @@ import com.example.bebedero.model.LineaBebedero
 import com.example.bebedero.model.MedicionTemperatura
 import com.example.bebedero.model.RolUsuario
 import com.example.bebedero.model.Usuario
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.random.Random
 
 /**
  * Simula un servicio remoto (RF-11 / RNF-04): expone los mismos datos que expondria
@@ -18,6 +24,11 @@ import kotlinx.coroutines.delay
  *
  * El Repository es el unico lugar de la app que conoce esta clase; el resto del codigo
  * (ViewModel, UI) solo conoce al Repository.
+ *
+ * Las lineas viven en el companion object (compartidas entre todas las instancias)
+ * porque necesitan poder cambiar con el tiempo: al hacer flushing (vuelven a Normal)
+ * y mediante una fluctuacion simulada en segundo plano (para siempre tener eventos
+ * criticos/advertencia con los que probar la app).
  */
 class ApiSimulada {
 
@@ -25,74 +36,6 @@ class ApiSimulada {
         Usuario(id = 1, nombre = "Operario Demo", rol = RolUsuario.OPERARIO),
         Usuario(id = 2, nombre = "Supervisor Demo", rol = RolUsuario.SUPERVISOR)
     )
-
-    private val granjas = listOf(
-        Granja(id = 1, nombre = "Granja 1"),
-        Granja(id = 2, nombre = "Granja 2"),
-        Granja(id = 3, nombre = "Granja 3")
-    )
-
-    private val galponesPorGranja = mapOf(1 to 3, 2 to 2, 3 to 4)
-
-    private val galpones: List<Galpon> = buildList {
-        var id = 1
-        granjas.forEach { granja ->
-            for (n in 1..galponesPorGranja.getValue(granja.id)) {
-                add(Galpon(id = id++, granjaId = granja.id, nombre = "Galpón $n"))
-            }
-        }
-    }
-
-    // Excepciones al valor normal: galponId a numero de linea a temperatura.
-    private val excepciones = mapOf(
-        (1 to 1) to 18.5,  // Normal
-        (2 to 3) to 32.5,  // Crítico por temperatura alta
-        (4 to 2) to 25.7,  // Advertencia
-        (6 to 1) to 12.8   // Crítico por temperatura baja
-    )
-
-    private fun estadoDe(temperatura: Double): EstadoTemperatura = when {
-        temperatura < 15.0 || temperatura > 30.0 ->
-            EstadoTemperatura.CRITICO
-
-        temperatura > 21.0 ->
-            EstadoTemperatura.ADVERTENCIA
-
-        else ->
-            EstadoTemperatura.NORMAL
-    }
-
-    private val lineas: List<LineaBebedero> = buildList {
-        var id = 1
-        galpones.forEach { galpon ->
-            for (n in 1..3) {
-                val normal = 17.0 + ((galpon.id * 3 + n) % 5) * 0.8
-                val temperatura = excepciones[galpon.id to n] ?: normal
-                add(
-                    LineaBebedero(
-                        id = id++,
-                        galponId = galpon.id,
-                        nombre = "Línea $n",
-                        temperaturaActual = temperatura,
-                        fechaActualizacion = "29/09/2026 16:30",
-                        estado = estadoDe(temperatura)
-                    )
-                )
-            }
-        }
-    }
-
-    private val alertas: List<Alerta> = lineas
-        .filter { it.estado != EstadoTemperatura.NORMAL }
-        .mapIndexed { index, linea ->
-            Alerta(
-                id = index + 1,
-                lineaId = linea.id,
-                fechaHora = linea.fechaActualizacion,
-                estado = linea.estado,
-                activa = true
-            )
-        }
 
     private val flushings = mutableListOf(
         Flushing(id = 1, lineaId = 6, usuarioId = 1, fechaHora = "29/09/2026 16:10",observacion = "Limpieza realizada correctamente"),
@@ -104,37 +47,47 @@ class ApiSimulada {
 
     suspend fun obtenerGranjas(): List<Granja> {
         latenciaRed()
-        return granjas
+        return Datos.granjas
     }
 
     suspend fun obtenerGalpones(granjaId: Int): List<Galpon> {
         latenciaRed()
-        return galpones.filter { it.granjaId == granjaId }
+        return Datos.galpones.filter { it.granjaId == granjaId }
     }
 
     suspend fun obtenerGalpon(id: Int): Galpon {
         latenciaRed()
-        return galpones.first { it.id == id }
+        return Datos.galpones.first { it.id == id }
     }
 
     suspend fun obtenerLineas(galponId: Int): List<LineaBebedero> {
         latenciaRed()
-        return lineas.filter { it.galponId == galponId }
+        return Datos.lineasActuales().filter { it.galponId == galponId }
     }
 
     suspend fun obtenerTodasLasLineas(): List<LineaBebedero> {
         latenciaRed()
-        return lineas
+        return Datos.lineasActuales()
     }
 
     suspend fun obtenerAlertasActivas(): List<Alerta> {
         latenciaRed()
-        return alertas.filter { it.activa }
+        return Datos.lineasActuales()
+            .filter { it.estado != EstadoTemperatura.NORMAL }
+            .mapIndexed { index, linea ->
+                Alerta(
+                    id = index + 1,
+                    lineaId = linea.id,
+                    fechaHora = linea.fechaActualizacion,
+                    estado = linea.estado,
+                    activa = true
+                )
+            }
     }
 
     suspend fun obtenerHistorial(lineaId: Int): List<MedicionTemperatura> {
         latenciaRed()
-        val linea = lineas.first { it.id == lineaId }
+        val linea = Datos.lineasActuales().first { it.id == lineaId }
 
         val variaciones = when {
             linea.temperaturaActual < 15.0 ->
@@ -176,5 +129,137 @@ class ApiSimulada {
     suspend fun obtenerUsuario(id: Int): Usuario {
         latenciaRed()
         return usuarios.first { it.id == id }
+    }
+
+    /**
+     * Marca que se hizo flushing en una linea: su temperatura vuelve a un
+     * valor Normal y queda con fecha de actualizacion "ahora". No tiene
+     * latencia de red porque se llama desde dentro de registrarFlushing
+     * del Repository, que ya tiene su propia demora.
+     */
+    fun marcarFlushingRealizado(lineaId: Int, fechaHora: String) {
+        Datos.marcarFlushingRealizado(lineaId, fechaHora)
+    }
+
+    companion object {
+
+        /**
+         * Arranca (una sola vez) la fluctuacion automatica de temperaturas en
+         * segundo plano, para que siempre existan lineas en Advertencia/Critico
+         * con las que probar flushing y notificaciones, sin depender de datos
+         * fijos. Pensada para llamarse una vez desde BebederoApp.
+         */
+        fun iniciarFluctuacionAutomatica(scope: CoroutineScope) {
+            Datos.iniciarFluctuacionAutomatica(scope)
+        }
+    }
+
+    private object Datos {
+
+        private val lock = Any()
+
+        val granjas = listOf(
+            Granja(id = 1, nombre = "Granja 1"),
+            Granja(id = 2, nombre = "Granja 2"),
+            Granja(id = 3, nombre = "Granja 3")
+        )
+
+        private val galponesPorGranja = mapOf(1 to 3, 2 to 2, 3 to 4)
+
+        val galpones: List<Galpon> = buildList {
+            var id = 1
+            granjas.forEach { granja ->
+                for (n in 1..galponesPorGranja.getValue(granja.id)) {
+                    add(Galpon(id = id++, granjaId = granja.id, nombre = "Galpón $n"))
+                }
+            }
+        }
+
+        // Excepciones al valor normal: galponId a numero de linea a temperatura.
+        private val excepciones = mapOf(
+            (1 to 1) to 18.5,  // Normal
+            (2 to 3) to 32.5,  // Crítico por temperatura alta
+            (4 to 2) to 25.7,  // Advertencia
+            (6 to 1) to 12.8   // Crítico por temperatura baja
+        )
+
+        private fun estadoDe(temperatura: Double): EstadoTemperatura = when {
+            temperatura < 15.0 || temperatura > 30.0 ->
+                EstadoTemperatura.CRITICO
+
+            temperatura > 21.0 ->
+                EstadoTemperatura.ADVERTENCIA
+
+            else ->
+                EstadoTemperatura.NORMAL
+        }
+
+        private fun fechaHoraActual(): String =
+            SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+
+        // Unica fuente mutable de lineas: todas las instancias de ApiSimulada
+        // leen y escriben sobre esta misma lista.
+        private val lineas: MutableList<LineaBebedero> = buildList {
+            var id = 1
+            galpones.forEach { galpon ->
+                for (n in 1..3) {
+                    val normal = 17.0 + ((galpon.id * 3 + n) % 5) * 0.8
+                    val temperatura = excepciones[galpon.id to n] ?: normal
+                    add(
+                        LineaBebedero(
+                            id = id++,
+                            galponId = galpon.id,
+                            nombre = "Línea $n",
+                            temperaturaActual = temperatura,
+                            fechaActualizacion = "29/09/2026 16:30",
+                            estado = estadoDe(temperatura)
+                        )
+                    )
+                }
+            }
+        }.toMutableList()
+
+        private var simulacionIniciada = false
+
+        fun lineasActuales(): List<LineaBebedero> = synchronized(lock) {
+            lineas.toList()
+        }
+
+        fun marcarFlushingRealizado(lineaId: Int, fechaHora: String) = synchronized(lock) {
+            val indice = lineas.indexOfFirst { it.id == lineaId }
+            if (indice >= 0) {
+                val temperaturaNormal = 18.0 + Random.nextDouble(0.0, 2.5)
+                lineas[indice] = lineas[indice].copy(
+                    temperaturaActual = temperaturaNormal,
+                    estado = estadoDe(temperaturaNormal),
+                    fechaActualizacion = fechaHora
+                )
+            }
+        }
+
+        fun iniciarFluctuacionAutomatica(scope: CoroutineScope) {
+            if (simulacionIniciada) return
+            simulacionIniciada = true
+
+            scope.launch {
+                while (true) {
+                    delay(25_000)
+
+                    synchronized(lock) {
+                        val cantidad = Random.nextInt(1, 4)
+                        repeat(cantidad) {
+                            val indice = Random.nextInt(lineas.size)
+                            // Rango amplio: puede caer en Normal, Advertencia o Critico.
+                            val nuevaTemperatura = Random.nextDouble(10.0, 35.0)
+                            lineas[indice] = lineas[indice].copy(
+                                temperaturaActual = nuevaTemperatura,
+                                estado = estadoDe(nuevaTemperatura),
+                                fechaActualizacion = fechaHoraActual()
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }

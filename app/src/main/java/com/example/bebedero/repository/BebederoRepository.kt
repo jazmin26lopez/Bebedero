@@ -159,6 +159,9 @@ class BebederoRepository(
                 id = idGenerado.toInt()
             )
 
+        // La línea vuelve a temperatura Normal al hacer flushing.
+        api.marcarFlushingRealizado(lineaId, fechaHora)
+
         // RF-12: notificación exclusiva del Supervisor.
         try {
             val context = BebederoApp.instancia

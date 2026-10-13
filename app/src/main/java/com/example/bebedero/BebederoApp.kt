@@ -8,9 +8,16 @@ import android.os.Build
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.bebedero.repository.ApiSimulada
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import java.util.concurrent.TimeUnit
 
 class BebederoApp : Application() {
+
+    // Vive mientras la app esté viva: aquí corre la fluctuación simulada de temperaturas.
+    private val scopeSimulacion = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
@@ -20,6 +27,10 @@ class BebederoApp : Application() {
 
         // Canales de notificación.
         crearCanalesNotificacion()
+
+        // Simulación: las líneas cambian de temperatura solas con el tiempo,
+        // para siempre tener eventos Crítico/Advertencia con los que probar.
+        ApiSimulada.iniciarFluctuacionAutomatica(scopeSimulacion)
 
     }
 

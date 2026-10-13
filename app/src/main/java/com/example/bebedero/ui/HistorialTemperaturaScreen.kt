@@ -153,11 +153,6 @@ private fun TarjetaMedicion(
                 text = "Fecha y hora: ${medicion.fechaHora}",
                 style = MaterialTheme.typography.bodyMedium
             )
-
-            Text(
-                text = "Línea ID: ${medicion.lineaId}",
-                style = MaterialTheme.typography.bodySmall
-            )
         }
     }
 }
