@@ -3,6 +3,7 @@ package com.example.bebedero.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,13 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,6 +57,7 @@ fun HistorialFlushingScreen(
     flushingViewModel: FlushingViewModel = viewModel(),
     consultaViewModel: ConsultaViewModel = viewModel()
 ) {
+
     // Registros reales almacenados en Room.
     val flushings by produceState<List<Flushing>?>(null) {
         value = flushingViewModel.obtenerFlushings()
@@ -79,8 +79,9 @@ fun HistorialFlushingScreen(
         null,
         flushings
     ) {
-        val ids = flushings?.map { it.usuarioId }?.distinct()
-            ?: return@produceState
+        val ids = flushings?.map {
+            it.usuarioId
+        }?.distinct() ?: return@produceState
 
         value = ids.mapNotNull { id ->
             try {
@@ -93,6 +94,7 @@ fun HistorialFlushingScreen(
 
     // Fecha actual del dispositivo.
     val hoy = Calendar.getInstance()
+
     val anioActual = hoy.get(Calendar.YEAR)
     val mesActual = hoy.get(Calendar.MONTH)
     val diaActual = hoy.get(Calendar.DAY_OF_MONTH)
@@ -118,7 +120,7 @@ fun HistorialFlushingScreen(
         mutableStateOf(diaActual)
     }
 
-    // Conversión de las fechas guardadas por los operarios.
+    // Formato original de las fechas registradas.
     val formatoRegistro = remember {
         SimpleDateFormat(
             "dd/MM/yyyy HH:mm",
@@ -130,7 +132,7 @@ fun HistorialFlushingScreen(
 
     val anioHistorico = anioBusqueda.toIntOrNull()
 
-    // Calcular los días válidos del mes seleccionado.
+    // Días válidos del mes seleccionado.
     val totalDiasMes = if (
         anioHistorico != null &&
         anioHistorico in 1..9999
@@ -143,11 +145,11 @@ fun HistorialFlushingScreen(
         31
     }
 
-    // Evitar fechas inexistentes.
     val diaValido = diaBusqueda.coerceIn(1, totalDiasMes)
 
-    // Filtrar únicamente los registros del período solicitado.
+    // Conservamos los criterios originales de filtrado.
     val registrosFiltrados = flushings?.filter { registro ->
+
         val fecha = try {
             formatoRegistro.parse(registro.fechaHora)
         } catch (_: Exception) {
@@ -157,6 +159,7 @@ fun HistorialFlushingScreen(
         if (fecha == null) {
             false
         } else {
+
             val calendarioRegistro = Calendar.getInstance().apply {
                 time = fecha
             }
@@ -171,6 +174,7 @@ fun HistorialFlushingScreen(
                 calendarioRegistro.get(Calendar.DAY_OF_MONTH)
 
             when (periodo) {
+
                 PeriodoFlushing.DIARIO -> {
                     anioRegistro == anioActual &&
                             mesRegistro == mesActual &&
@@ -207,46 +211,48 @@ fun HistorialFlushingScreen(
         titulo = "Historial de flushing",
         subtitulo = ""
     ) {
+
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // FILTROS PRINCIPALES
-
+            // FILTROS AZULES CON ANIMACIÓN
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+
                 PeriodoFlushing.entries.forEach { opcion ->
+
                     val texto = when (opcion) {
                         PeriodoFlushing.DIARIO -> "Diario"
                         PeriodoFlushing.MENSUAL -> "Mensual"
                         PeriodoFlushing.ANUAL -> "Anual"
                     }
 
-                    if (periodo == opcion) {
-                        Button(
-                            onClick = { periodo = opcion },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(texto)
-                        }
+                    // Una marca identifica el filtro seleccionado.
+                    val textoBoton = if (periodo == opcion) {
+                        "✓ $texto"
                     } else {
-                        OutlinedButton(
-                            onClick = { periodo = opcion },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(texto)
-                        }
+                        texto
                     }
+
+                    BotonAzulAnimado(
+                        texto = textoBoton,
+                        onClick = {
+                            periodo = opcion
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
 
             // SELECCIÓN DEL PERÍODO
-
             when (periodo) {
 
                 PeriodoFlushing.DIARIO -> {
+
                     Text(
                         text = "Registros de hoy",
                         style = MaterialTheme.typography.titleMedium,
@@ -260,6 +266,7 @@ fun HistorialFlushingScreen(
                 }
 
                 PeriodoFlushing.MENSUAL -> {
+
                     Text(
                         text = "Seleccione un mes de $anioActual",
                         style = MaterialTheme.typography.titleMedium,
@@ -270,11 +277,14 @@ fun HistorialFlushingScreen(
                         titulo = "Mes",
                         opciones = MESES,
                         seleccionado = mesMensual,
-                        onSeleccionar = { mesMensual = it }
+                        onSeleccionar = {
+                            mesMensual = it
+                        }
                     )
                 }
 
                 PeriodoFlushing.ANUAL -> {
+
                     Text(
                         text = "Búsqueda histórica",
                         style = MaterialTheme.typography.titleMedium,
@@ -291,7 +301,9 @@ fun HistorialFlushingScreen(
                                 anioBusqueda = nuevoValor
                             }
                         },
-                        label = { Text("Año") },
+                        label = {
+                            Text("Año")
+                        },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number
@@ -324,6 +336,7 @@ fun HistorialFlushingScreen(
                         anioHistorico == null ||
                         anioHistorico !in 1..9999
                     ) {
+
                         Text(
                             text = "Ingrese un año válido de cuatro cifras.",
                             color = MaterialTheme.colorScheme.error
@@ -332,8 +345,7 @@ fun HistorialFlushingScreen(
                 }
             }
 
-            // DATOS Y RESULTADOS
-
+            // RESULTADOS
             if (
                 flushings == null ||
                 listaGranjas == null ||
@@ -341,7 +353,9 @@ fun HistorialFlushingScreen(
                 listaLineas == null ||
                 listaUsuarios == null
             ) {
+
                 CargandoIndicador()
+
             } else {
 
                 val lista = registrosFiltrados.orEmpty()
@@ -349,12 +363,15 @@ fun HistorialFlushingScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth()
                 ) {
+
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+
                         Text(
                             text = when (periodo) {
+
                                 PeriodoFlushing.DIARIO ->
                                     "Total de flushings realizados hoy"
 
@@ -376,22 +393,29 @@ fun HistorialFlushingScreen(
                 }
 
                 if (lista.isEmpty()) {
+
                     Text(
                         text = "No existen registros de flushing para el período seleccionado.",
                         style = MaterialTheme.typography.bodyMedium
                     )
+
                 } else {
 
+                    // Historial desplazable.
                     LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 24.dp)
                     ) {
+
                         items(
                             items = lista,
                             key = { it.id }
                         ) { registro ->
 
-                            // Ubicar la granja, galpón y línea.
+                            // Ubicar granja, galpón y línea.
                             val linea = listaLineas.find {
                                 it.id == registro.lineaId
                             }
@@ -427,7 +451,6 @@ fun HistorialFlushingScreen(
 }
 
 // SELECTOR DE MESES O DÍAS
-
 @Composable
 private fun SelectorOpciones(
     titulo: String,
@@ -435,34 +458,43 @@ private fun SelectorOpciones(
     seleccionado: Int,
     onSeleccionar: (Int) -> Unit
 ) {
+
     var expandido by remember {
         mutableStateOf(false)
     }
 
-    Column {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+
         Text(
             text = titulo,
             style = MaterialTheme.typography.labelLarge
         )
 
-        OutlinedButton(
-            onClick = { expandido = true },
+        BotonAzulAnimado(
+            texto = opciones.getOrElse(seleccionado) {
+                "Seleccionar"
+            },
+            onClick = {
+                expandido = true
+            },
             modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = opciones.getOrElse(seleccionado) {
-                    "Seleccionar"
-                }
-            )
-        }
+        )
 
         DropdownMenu(
             expanded = expandido,
-            onDismissRequest = { expandido = false }
+            onDismissRequest = {
+                expandido = false
+            }
         ) {
+
             opciones.forEachIndexed { indice, opcion ->
+
                 DropdownMenuItem(
-                    text = { Text(opcion) },
+                    text = {
+                        Text(opcion)
+                    },
                     onClick = {
                         onSeleccionar(indice)
                         expandido = false
@@ -474,7 +506,6 @@ private fun SelectorOpciones(
 }
 
 // DETALLE DE CADA REGISTRO
-
 @Composable
 private fun TarjetaHistorialFlushing(
     registro: Flushing,
@@ -483,13 +514,16 @@ private fun TarjetaHistorialFlushing(
     linea: String,
     operario: String
 ) {
+
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
+
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(9.dp)
         ) {
+
             Text(
                 text = granja,
                 style = MaterialTheme.typography.titleMedium,

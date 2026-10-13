@@ -3,6 +3,7 @@ package com.example.bebedero.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -28,21 +30,22 @@ fun EventosCriticosScreen(
     onVerDetalle: (Int) -> Unit,
     viewModel: ConsultaViewModel = viewModel()
 ) {
-    // Consultar líneas con alertas activas
+
+    // Consultar líneas con alertas activas.
     val eventos by produceState<List<LineaBebedero>?>(
         initialValue = null
     ) {
         value = viewModel.eventosCriticos()
     }
 
-    // Consultar granjas
+    // Consultar granjas.
     val granjas by produceState<List<Granja>?>(
         initialValue = null
     ) {
         value = viewModel.granjas()
     }
 
-    // Consultar galpones
+    // Consultar galpones.
     val galpones by produceState<List<Galpon>?>(
         initialValue = null
     ) {
@@ -53,9 +56,12 @@ fun EventosCriticosScreen(
         titulo = "Eventos críticos",
         subtitulo = "Supervisor"
     ) {
+
         Column(
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+
             TituloSeccion(
                 titulo = "Líneas que requieren atención",
                 descripcion = "Temperaturas en advertencia o estado crítico."
@@ -70,10 +76,19 @@ fun EventosCriticosScreen(
                 listaGranjas == null ||
                 listaGalpones == null
             ) {
+
                 CargandoIndicador()
+
             } else if (lista.isEmpty()) {
-                Text("No existen eventos activos.")
+
+                Text(
+                    text = "No existen eventos activos.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF17643B)
+                )
+
             } else {
+
                 val criticos = lista.count {
                     it.estado == EstadoTemperatura.CRITICO
                 }
@@ -93,9 +108,17 @@ fun EventosCriticosScreen(
                     style = MaterialTheme.typography.bodyMedium
                 )
 
+                // LISTADO DESPLAZABLE DE EVENTOS.
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        bottom = 24.dp
+                    )
                 ) {
+
                     items(
                         items = lista,
                         key = { it.id }
@@ -133,45 +156,48 @@ private fun TarjetaEventoCritico(
     nombreGalpon: String,
     onClick: () -> Unit
 ) {
+
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth()
     ) {
+
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Nombre de la granja
+
+            // Nombre de la granja.
             Text(
                 text = nombreGranja,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
 
-            // Nombre o número real del galpón
+            // Galpón.
             Text(
                 text = nombreGalpon,
                 style = MaterialTheme.typography.titleSmall
             )
 
-            // Línea monitoreada
+            // Línea monitoreada.
             Text(
                 text = linea.nombre,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
 
-            // Temperatura actual
+            // Temperatura actual.
             Text(
                 text = "%.1f °C".format(linea.temperaturaActual),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
 
-            // Indicador de estado
+            // Conservamos los colores de alerta originales.
             EstadoChip(linea.estado)
 
-            // Fecha de actualización
+            // Fecha de actualización.
             Text(
                 text = "Última actualización: ${linea.fechaActualizacion}",
                 style = MaterialTheme.typography.bodySmall
@@ -179,7 +205,8 @@ private fun TarjetaEventoCritico(
 
             Text(
                 text = "Toca para ver el detalle",
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }

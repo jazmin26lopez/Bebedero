@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -66,7 +64,8 @@ fun ResumenSupervisorScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
@@ -85,7 +84,6 @@ fun ResumenSupervisorScreen(
             } else {
 
                 // RESUMEN GENERAL
-
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -105,7 +103,6 @@ fun ResumenSupervisorScreen(
                 }
 
                 // EVENTOS QUE REQUIEREN ATENCIÓN
-
                 Card(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -120,7 +117,6 @@ fun ResumenSupervisorScreen(
                         )
 
                         if (totalEventos > 0) {
-
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
@@ -144,13 +140,11 @@ fun ResumenSupervisorScreen(
                                 style = MaterialTheme.typography.bodyMedium
                             )
 
-                            Button(
+                            BotonAzulAnimado(
+                                texto = "Ver eventos críticos",
                                 onClick = onVerEventosCriticos,
                                 modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Ver eventos críticos")
-                            }
-
+                            )
                         } else {
                             Text(
                                 text = "Sin eventos activos. Todas las líneas monitoreadas se encuentran en estado normal.",
@@ -162,7 +156,6 @@ fun ResumenSupervisorScreen(
                 }
 
                 // LÍNEAS EN ESTADO NORMAL
-
                 TarjetaIndicador(
                     titulo = "Líneas en estado normal",
                     cantidad = totalNormales,
@@ -171,7 +164,6 @@ fun ResumenSupervisorScreen(
                 )
 
                 // CONSULTA GENERAL
-
                 Text(
                     text = "Consulta general",
                     style = MaterialTheme.typography.titleLarge,
@@ -183,15 +175,13 @@ fun ResumenSupervisorScreen(
                     style = MaterialTheme.typography.bodyMedium
                 )
 
-                OutlinedButton(
+                BotonAzulAnimado(
+                    texto = "Ver granjas",
                     onClick = onVerGranjas,
                     modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Ver granjas")
-                }
+                )
 
-                // HISTORIAL DE FLUSHING - HU-07
-
+                // HISTORIAL DE FLUSHING
                 Text(
                     text = "Registros de flushing",
                     style = MaterialTheme.typography.titleLarge,
@@ -203,12 +193,11 @@ fun ResumenSupervisorScreen(
                     style = MaterialTheme.typography.bodyMedium
                 )
 
-                OutlinedButton(
+                BotonAzulAnimado(
+                    texto = "Ver historial de flushing",
                     onClick = onVerHistorialFlushing,
                     modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Ver historial de flushing")
-                }
+                )
             }
         }
     }

@@ -136,7 +136,8 @@ class BebederoRepository(
         lineaId: Int,
         usuarioId: Int,
         fechaHora: String,
-        observacion: String
+        observacion: String,
+        fotoUri: String?=null
     ): Flushing {
 
         val nuevoFlushing = Flushing(
@@ -144,7 +145,8 @@ class BebederoRepository(
             lineaId = lineaId,
             usuarioId = usuarioId,
             fechaHora = fechaHora,
-            observacion = observacion
+            observacion = observacion,
+            fotoUri = fotoUri
         )
 
         // Guardar en Room.

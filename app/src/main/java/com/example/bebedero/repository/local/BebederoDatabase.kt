@@ -15,7 +15,7 @@ import com.example.bebedero.BebederoApp
         LineaBebederoEntity::class,
         FlushingEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class BebederoDatabase : RoomDatabase() {
@@ -24,10 +24,8 @@ abstract class BebederoDatabase : RoomDatabase() {
 
     companion object {
 
-        // Migración de la base de datos:
-        // versión 1 a versión 2.
-        // Conserva las tablas anteriores y agrega flushings.
-
+        // Migración original: versión 1 a 2.
+        // Se conserva para las instalaciones anteriores.
         private val MIGRATION_1_2 = object : Migration(1, 2) {
 
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -45,7 +43,22 @@ abstract class BebederoDatabase : RoomDatabase() {
             }
         }
 
-        // Instancia única de la base de datos
+        // Nueva migración: versión 2 a 3.
+        // Agrega una columna opcional para la fotografía.
+        // No borra los flushings existentes.
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    ALTER TABLE `flushings`
+                    ADD COLUMN `fotoUri` TEXT DEFAULT NULL
+                    """.trimIndent()
+                )
+            }
+        }
+
+        // Instancia única de Room.
         val instancia: BebederoDatabase by lazy {
 
             Room.databaseBuilder(
@@ -53,7 +66,10 @@ abstract class BebederoDatabase : RoomDatabase() {
                 BebederoDatabase::class.java,
                 "bebedero.db"
             )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(
+                    MIGRATION_1_2,
+                    MIGRATION_2_3
+                )
                 .build()
         }
     }

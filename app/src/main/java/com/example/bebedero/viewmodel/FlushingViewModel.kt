@@ -1,9 +1,11 @@
+
 package com.example.bebedero.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.example.bebedero.model.Flushing
-import com.example.bebedero.repository.BebederoRepository
 import com.example.bebedero.model.Usuario
+import com.example.bebedero.repository.BebederoRepository
+
 class FlushingViewModel(
     private val repo: BebederoRepository = BebederoRepository()
 ) : ViewModel() {
@@ -12,13 +14,15 @@ class FlushingViewModel(
         lineaId: Int,
         usuarioId: Int,
         fechaHora: String,
-        observacion: String
+        observacion: String,
+        fotoUri: String? = null
     ): Flushing {
         return repo.registrarFlushing(
             lineaId = lineaId,
             usuarioId = usuarioId,
             fechaHora = fechaHora,
-            observacion = observacion
+            observacion = observacion,
+            fotoUri = fotoUri
         )
     }
 
@@ -29,5 +33,4 @@ class FlushingViewModel(
     suspend fun obtenerUsuario(id: Int): Usuario {
         return repo.obtenerUsuario(id)
     }
-
 }

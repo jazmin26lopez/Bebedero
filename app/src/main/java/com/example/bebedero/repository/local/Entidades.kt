@@ -69,7 +69,8 @@ data class FlushingEntity(
     val lineaId: Int,
     val usuarioId: Int,
     val fechaHora: String,
-    val observacion: String
+    val observacion: String,
+    val fotoUri: String? = null
 )
 
 // ====================================
@@ -133,7 +134,8 @@ fun Flushing.aEntity() = FlushingEntity(
     lineaId = lineaId,
     usuarioId = usuarioId,
     fechaHora = fechaHora,
-    observacion = observacion
+    observacion = observacion,
+    fotoUri = fotoUri
 )
 
 fun FlushingEntity.aDominio() = Flushing(
@@ -141,5 +143,6 @@ fun FlushingEntity.aDominio() = Flushing(
     lineaId = lineaId,
     usuarioId = usuarioId,
     fechaHora = fechaHora,
-    observacion = observacion
+    observacion = observacion,
+    fotoUri = fotoUri
 )
