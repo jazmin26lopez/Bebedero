@@ -24,6 +24,7 @@ Las temperaturas cambian solas con el tiempo (simulación en segundo plano, cada
 ### Rol Operario
 - Selección de rol en la pantalla de inicio.
 - Consulta de Granjas → Galpones → Líneas → Detalle de una línea (temperatura, estado y última actualización).
+- Alertas activas: listado de líneas en Advertencia o Crítico, con acceso directo al detalle de cada una (RF-07).
 - Registro de flushing: formulario con observación obligatoria (validada) y fotografía opcional tomada con la cámara del dispositivo.
 - Pantalla de confirmación del registro.
 - Notificación local cuando una línea pasa a estado Advertencia o Crítico (revisión periódica en segundo plano con WorkManager).
