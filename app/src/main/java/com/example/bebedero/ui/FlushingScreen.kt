@@ -16,8 +16,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -162,6 +166,21 @@ fun FlushingScreen(
                     minLines = 3,
                     maxLines = 5,
                     isError = errorObservacion,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = null
+                        )
+                    },
+                    trailingIcon = {
+                        if (errorObservacion) {
+                            Icon(
+                                imageVector = Icons.Filled.Error,
+                                contentDescription = "Campo obligatorio",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    },
                     supportingText = {
                         if (errorObservacion) {
                             Text(
