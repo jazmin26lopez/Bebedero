@@ -55,6 +55,7 @@ fun GranjasScreen(
                     TarjetaNavegacion(
                         titulo = granja.nombre,
                         subtitulo = conteo,
+                        icono = "🌾",
                         onClick = { onGranja(granja.id) }
                     )
                 }

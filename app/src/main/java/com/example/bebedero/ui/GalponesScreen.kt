@@ -41,6 +41,7 @@ fun GalponesScreen(
                     TarjetaNavegacion(
                         titulo = galpon.nombre,
                         subtitulo = conteo,
+                        icono = "🏠",
                         onClick = { onGalpon(galpon.id) }
                     )
                 }

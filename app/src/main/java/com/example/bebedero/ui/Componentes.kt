@@ -7,14 +7,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -57,6 +61,14 @@ fun EstadoTemperatura.colorFondo(): Color = when (this) {
     EstadoTemperatura.NORMAL -> Color(0xFFDCEFE4)
     EstadoTemperatura.ADVERTENCIA -> Color(0xFFFFF0CF)
     EstadoTemperatura.CRITICO -> Color(0xFFF8DDDD)
+}
+
+// Color vivo para la franja de acento de las tarjetas (más saturado que colorTexto,
+// pensado para resaltar sobre el azul de TarjetaLinea/TarjetaNavegacion).
+fun EstadoTemperatura.colorAcento(): Color = when (this) {
+    EstadoTemperatura.NORMAL -> Color(0xFF2ECC71)
+    EstadoTemperatura.ADVERTENCIA -> Color(0xFFF5A623)
+    EstadoTemperatura.CRITICO -> Color(0xFFE74C3C)
 }
 
 @Composable
@@ -202,7 +214,8 @@ fun BotonAzulAnimado(
 fun TarjetaNavegacion(
     titulo: String,
     subtitulo: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    icono: String = ""
 ) {
     val interaccion = remember {
         MutableInteractionSource()
@@ -233,11 +246,20 @@ fun TarjetaNavegacion(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text(
-            text = titulo,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icono.isNotBlank()) {
+                Text(
+                    text = icono,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+
+            Text(
+                text = titulo,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
 
         Text(
             text = subtitulo,
@@ -285,25 +307,46 @@ fun TarjetaLinea(
                 indication = null,
                 onClick = onClick
             )
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .height(IntrinsicSize.Min)
     ) {
-        Column {
-            Text(
-                text = nombre,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
+        // Franja de acento: color vivo según el estado de la línea.
+        Box(
+            modifier = Modifier
+                .width(6.dp)
+                .fillMaxHeight()
+                .background(estado.colorAcento())
+        )
 
-            Text(
-                text = "%.1f °C".format(temperatura),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.90f)
-            )
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "💧 ",
+                        color = Color.White
+                    )
+
+                    Text(
+                        text = nombre,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+
+                Text(
+                    text = "%.1f °C".format(temperatura),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.90f)
+                )
+            }
+
+            EstadoChip(estado)
         }
-
-        EstadoChip(estado)
     }
 }
 
