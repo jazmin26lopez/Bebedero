@@ -1,8 +1,12 @@
 package com.example.bebedero.ui
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bebedero.model.Galpon
 import com.example.bebedero.model.Granja
@@ -19,7 +23,8 @@ fun GranjasScreen(
     rol: String,
     viewModel: ConsultaViewModel = viewModel(),
     onBack: () -> Unit,
-    onGranja: (Int) -> Unit
+    onGranja: (Int) -> Unit,
+    onVerAlertas: () -> Unit = {}
 ) {
     val estado by produceState<List<Granja>?>(initialValue = null, key1 = Unit) {
         value = viewModel.granjas()
@@ -30,6 +35,17 @@ fun GranjasScreen(
             "Seleccionar granja",
             "Selecciona la granja que deseas revisar."
         )
+
+        if (rol == "operario") {
+            BotonAzulAnimado(
+                texto = "🔔 Ver alertas activas",
+                onClick = onVerAlertas,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
+        }
+
         val granjas = estado
         if (granjas == null) {
             CargandoIndicador()

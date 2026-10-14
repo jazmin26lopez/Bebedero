@@ -37,6 +37,7 @@ object Rutas {
     const val HISTORIAL = "historial/{lineaId}"
     const val EVENTOS_CRITICOS = "eventosCriticos"
     const val HISTORIAL_FLUSHING = "historialFlushing"
+    const val ALERTAS_OPERARIO = "alertasOperario"
 }
 
 @Composable
@@ -113,6 +114,9 @@ fun AppNavigation() {
                 },
                 onGranja = { granjaId ->
                     nav.navigate("galpones/$rol/$granjaId")
+                },
+                onVerAlertas = {
+                    nav.navigate(Rutas.ALERTAS_OPERARIO)
                 }
             )
         }
@@ -316,6 +320,16 @@ fun AppNavigation() {
         // HISTORIAL DE FLUSHING
         composable(Rutas.HISTORIAL_FLUSHING) {
             HistorialFlushingScreen()
+        }
+
+        // ALERTAS ACTIVAS (OPERARIO) — RF-07 / HU-02
+        composable(Rutas.ALERTAS_OPERARIO) {
+
+            AlertasActivasScreen(
+                onVerDetalle = { lineaId ->
+                    nav.navigate("detalle/operario/$lineaId")
+                }
+            )
         }
     }
 }

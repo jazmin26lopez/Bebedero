@@ -30,6 +30,40 @@ fun EventosCriticosScreen(
     onVerDetalle: (Int) -> Unit,
     viewModel: ConsultaViewModel = viewModel()
 ) {
+    ListaLineasConAtencion(
+        titulo = "Eventos críticos",
+        subtitulo = "Supervisor",
+        onVerDetalle = onVerDetalle,
+        viewModel = viewModel
+    )
+}
+
+/**
+ * Pantalla de alertas activas para el Operario (RF-07 / HU-02).
+ * Muestra exactamente las mismas líneas que "Eventos críticos" (Advertencia/Crítico):
+ * el caso define ambas historias de usuario sobre la misma información, solo que
+ * una la consulta el Operario (HU-02) y la otra el Supervisor (HU-05).
+ */
+@Composable
+fun AlertasActivasScreen(
+    onVerDetalle: (Int) -> Unit,
+    viewModel: ConsultaViewModel = viewModel()
+) {
+    ListaLineasConAtencion(
+        titulo = "Alertas activas",
+        subtitulo = "Operario",
+        onVerDetalle = onVerDetalle,
+        viewModel = viewModel
+    )
+}
+
+@Composable
+private fun ListaLineasConAtencion(
+    titulo: String,
+    subtitulo: String,
+    onVerDetalle: (Int) -> Unit,
+    viewModel: ConsultaViewModel
+) {
 
     // Consultar líneas con alertas activas.
     val eventos by produceState<List<LineaBebedero>?>(
@@ -53,8 +87,8 @@ fun EventosCriticosScreen(
     }
 
     PantallaBase(
-        titulo = "Eventos críticos",
-        subtitulo = "Supervisor"
+        titulo = titulo,
+        subtitulo = subtitulo
     ) {
 
         Column(
