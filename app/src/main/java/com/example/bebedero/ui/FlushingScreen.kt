@@ -146,7 +146,7 @@ fun FlushingScreen(
                     onValueChange = {
                         observacion = it
 
-                        if (it.isNotBlank()) {
+                        if (flushingViewModel.observacionValida(it)) {
                             errorObservacion = false
                         }
                     },
@@ -237,7 +237,7 @@ fun FlushingScreen(
                     texto = "Registrar flushing",
                     onClick = {
 
-                        if (observacion.isBlank()) {
+                        if (!flushingViewModel.observacionValida(observacion)) {
                             errorObservacion = true
                         } else {
                             errorObservacion = false
