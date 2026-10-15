@@ -29,6 +29,10 @@ import java.util.Locale
  * - Consulta de granjas, galpones y líneas.
  * - Registro e historial de flushing.
  * - Notificaciones según el rol seleccionado.
+ *
+ * Agrega:
+ * - Editar observación de flushing.
+ * - Eliminar registro de flushing.
  */
 class BebederoRepository(
     private val api: ApiSimulada = ApiSimulada(),
@@ -126,7 +130,7 @@ class BebederoRepository(
     ): List<MedicionTemperatura> =
         api.obtenerHistorial(lineaId)
 
-    // HISTORIAL REAL DE FLUSHING DESDE ROOM
+    // CONSULTAR REGISTROS REALES DESDE ROOM
     suspend fun obtenerFlushings(): List<Flushing> =
         dao.obtenerFlushings()
             .map { it.aDominio() }
@@ -137,7 +141,7 @@ class BebederoRepository(
         usuarioId: Int,
         fechaHora: String,
         observacion: String,
-        fotoUri: String?=null
+        fotoUri: String? = null
     ): Flushing {
 
         val nuevoFlushing = Flushing(
@@ -154,12 +158,11 @@ class BebederoRepository(
             nuevoFlushing.aEntity()
         )
 
-        val flushingGuardado =
-            nuevoFlushing.copy(
-                id = idGenerado.toInt()
-            )
+        val flushingGuardado = nuevoFlushing.copy(
+            id = idGenerado.toInt()
+        )
 
-        // La línea vuelve a temperatura Normal al hacer flushing.
+        // Mantener la lógica actual de temperaturas.
         api.marcarFlushingRealizado(lineaId, fechaHora)
 
         // RF-12: notificación exclusiva del Supervisor.
@@ -176,7 +179,6 @@ class BebederoRepository(
                 ""
             )
 
-            // No mostrar el contador al Operario.
             if (rolActual == "supervisor") {
                 actualizarNotificacionFlushing()
             }
@@ -192,10 +194,64 @@ class BebederoRepository(
         return flushingGuardado
     }
 
+    // NUEVO: EDITAR OBSERVACIÓN DE FLUSHING
+    suspend fun actualizarObservacionFlushing(
+        flushingId: Int,
+        observacion: String
+    ): Boolean {
+
+        require(observacion.isNotBlank()) {
+            "La observación no puede estar vacía."
+        }
+
+        val filasActualizadas =
+            dao.actualizarObservacionFlushing(
+                flushingId = flushingId,
+                observacion = observacion.trim()
+            )
+
+        return filasActualizadas > 0
+    }
+
+    // NUEVO: ELIMINAR REGISTRO DE FLUSHING
+    suspend fun eliminarFlushing(
+        flushingId: Int
+    ): Boolean {
+
+        val filasEliminadas =
+            dao.eliminarFlushing(flushingId)
+
+        if (filasEliminadas > 0) {
+
+            // Refrescar el contador si está activo el Supervisor.
+            val context = BebederoApp.instancia
+
+            val preferencias = context.getSharedPreferences(
+                "bebedero_configuracion",
+                Context.MODE_PRIVATE
+            )
+
+            if (
+                preferencias.getString("rol_actual", "") ==
+                "supervisor"
+            ) {
+                try {
+                    actualizarNotificacionFlushing()
+                } catch (e: Exception) {
+                    Log.e(
+                        "Bebedero",
+                        "No se pudo actualizar el contador de flushing",
+                        e
+                    )
+                }
+            }
+        }
+
+        return filasEliminadas > 0
+    }
+
     /**
-     * Calcula la cantidad de flushings realizados hoy
-     * a partir de los registros reales guardados en Room.
-     *
+     * Calcula los flushings del día usando Room.
      * Actualiza siempre la misma notificación.
      */
     suspend fun actualizarNotificacionFlushing() {
