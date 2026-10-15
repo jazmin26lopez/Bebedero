@@ -11,18 +11,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +41,7 @@ import com.example.bebedero.model.LineaBebedero
 import com.example.bebedero.model.Usuario
 import com.example.bebedero.viewmodel.ConsultaViewModel
 import com.example.bebedero.viewmodel.FlushingViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -58,8 +64,17 @@ fun HistorialFlushingScreen(
     consultaViewModel: ConsultaViewModel = viewModel()
 ) {
 
-    // Registros reales almacenados en Room.
-    val flushings by produceState<List<Flushing>?>(null) {
+    val scope = rememberCoroutineScope()
+
+    // Permite recargar los registros después de editar o eliminar.
+    var revision by remember {
+        mutableIntStateOf(0)
+    }
+
+    val flushings by produceState<List<Flushing>?>(
+        initialValue = null,
+        key1 = revision
+    ) {
         value = flushingViewModel.obtenerFlushings()
     }
 
@@ -76,8 +91,8 @@ fun HistorialFlushingScreen(
     }
 
     val usuarios by produceState<Map<Int, Usuario>?>(
-        null,
-        flushings
+        initialValue = null,
+        key1 = flushings
     ) {
         val ids = flushings?.map {
             it.usuarioId
@@ -99,13 +114,13 @@ fun HistorialFlushingScreen(
     val mesActual = hoy.get(Calendar.MONTH)
     val diaActual = hoy.get(Calendar.DAY_OF_MONTH)
 
-    // Estado de los filtros.
+    // Filtros.
     var periodo by remember {
         mutableStateOf(PeriodoFlushing.DIARIO)
     }
 
     var mesMensual by remember {
-        mutableStateOf(mesActual)
+        mutableIntStateOf(mesActual)
     }
 
     var anioBusqueda by remember {
@@ -113,14 +128,38 @@ fun HistorialFlushingScreen(
     }
 
     var mesBusqueda by remember {
-        mutableStateOf(mesActual)
+        mutableIntStateOf(mesActual)
     }
 
     var diaBusqueda by remember {
-        mutableStateOf(diaActual)
+        mutableIntStateOf(diaActual)
     }
 
-    // Formato original de las fechas registradas.
+    // Estado de edición y eliminación.
+    var registroEditar by remember {
+        mutableStateOf<Flushing?>(null)
+    }
+
+    var registroEliminar by remember {
+        mutableStateOf<Flushing?>(null)
+    }
+
+    var nuevaObservacion by remember {
+        mutableStateOf("")
+    }
+
+    var procesando by remember {
+        mutableStateOf(false)
+    }
+
+    var errorDialogo by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var mensajeResultado by remember {
+        mutableStateOf<String?>(null)
+    }
+
     val formatoRegistro = remember {
         SimpleDateFormat(
             "dd/MM/yyyy HH:mm",
@@ -132,7 +171,6 @@ fun HistorialFlushingScreen(
 
     val anioHistorico = anioBusqueda.toIntOrNull()
 
-    // Días válidos del mes seleccionado.
     val totalDiasMes = if (
         anioHistorico != null &&
         anioHistorico in 1..9999
@@ -147,7 +185,7 @@ fun HistorialFlushingScreen(
 
     val diaValido = diaBusqueda.coerceIn(1, totalDiasMes)
 
-    // Conservamos los criterios originales de filtrado.
+    // Filtros originales: Diario, Mensual y Anual.
     val registrosFiltrados = flushings?.filter { registro ->
 
         val fecha = try {
@@ -160,38 +198,30 @@ fun HistorialFlushingScreen(
             false
         } else {
 
-            val calendarioRegistro = Calendar.getInstance().apply {
+            val calendario = Calendar.getInstance().apply {
                 time = fecha
             }
 
-            val anioRegistro =
-                calendarioRegistro.get(Calendar.YEAR)
-
-            val mesRegistro =
-                calendarioRegistro.get(Calendar.MONTH)
-
-            val diaRegistro =
-                calendarioRegistro.get(Calendar.DAY_OF_MONTH)
+            val anioRegistro = calendario.get(Calendar.YEAR)
+            val mesRegistro = calendario.get(Calendar.MONTH)
+            val diaRegistro = calendario.get(Calendar.DAY_OF_MONTH)
 
             when (periodo) {
 
-                PeriodoFlushing.DIARIO -> {
+                PeriodoFlushing.DIARIO ->
                     anioRegistro == anioActual &&
                             mesRegistro == mesActual &&
                             diaRegistro == diaActual
-                }
 
-                PeriodoFlushing.MENSUAL -> {
+                PeriodoFlushing.MENSUAL ->
                     anioRegistro == anioActual &&
                             mesRegistro == mesMensual
-                }
 
-                PeriodoFlushing.ANUAL -> {
+                PeriodoFlushing.ANUAL ->
                     anioHistorico != null &&
                             anioRegistro == anioHistorico &&
                             mesRegistro == mesBusqueda &&
                             diaRegistro == diaValido
-                }
             }
         }
     }?.sortedByDescending { registro ->
@@ -202,14 +232,9 @@ fun HistorialFlushingScreen(
         }
     }
 
-    val listaGranjas = granjas
-    val listaGalpones = galpones
-    val listaLineas = lineas
-    val listaUsuarios = usuarios
-
     PantallaBase(
         titulo = "Historial de flushing",
-        subtitulo = ""
+        subtitulo = "Supervisor"
     ) {
 
         Column(
@@ -217,7 +242,7 @@ fun HistorialFlushingScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // FILTROS AZULES CON ANIMACIÓN
+            // BOTONES DE FILTRO.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -231,24 +256,22 @@ fun HistorialFlushingScreen(
                         PeriodoFlushing.ANUAL -> "Anual"
                     }
 
-                    // Una marca identifica el filtro seleccionado.
-                    val textoBoton = if (periodo == opcion) {
-                        "✓ $texto"
-                    } else {
-                        texto
-                    }
-
                     BotonAzulAnimado(
-                        texto = textoBoton,
+                        texto = if (periodo == opcion) {
+                            "✓ $texto"
+                        } else {
+                            texto
+                        },
                         onClick = {
                             periodo = opcion
+                            mensajeResultado = null
                         },
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
 
-            // SELECCIÓN DEL PERÍODO
+            // SELECCIÓN DEL PERÍODO.
             when (periodo) {
 
                 PeriodoFlushing.DIARIO -> {
@@ -260,8 +283,7 @@ fun HistorialFlushingScreen(
                     )
 
                     Text(
-                        text = "$diaActual de ${MESES[mesActual].lowercase()} de $anioActual",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "$diaActual de ${MESES[mesActual].lowercase()} de $anioActual"
                     )
                 }
 
@@ -293,12 +315,12 @@ fun HistorialFlushingScreen(
 
                     OutlinedTextField(
                         value = anioBusqueda,
-                        onValueChange = { nuevoValor ->
+                        onValueChange = { valor ->
                             if (
-                                nuevoValor.length <= 4 &&
-                                nuevoValor.all { it.isDigit() }
+                                valor.length <= 4 &&
+                                valor.all { it.isDigit() }
                             ) {
-                                anioBusqueda = nuevoValor
+                                anioBusqueda = valor
                             }
                         },
                         label = {
@@ -336,7 +358,6 @@ fun HistorialFlushingScreen(
                         anioHistorico == null ||
                         anioHistorico !in 1..9999
                     ) {
-
                         Text(
                             text = "Ingrese un año válido de cuatro cifras.",
                             color = MaterialTheme.colorScheme.error
@@ -345,7 +366,20 @@ fun HistorialFlushingScreen(
                 }
             }
 
-            // RESULTADOS
+            if (mensajeResultado != null) {
+                Text(
+                    text = mensajeResultado.orEmpty(),
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            // RESULTADOS.
+            val listaGranjas = granjas
+            val listaGalpones = galpones
+            val listaLineas = lineas
+            val listaUsuarios = usuarios
+
             if (
                 flushings == null ||
                 listaGranjas == null ||
@@ -395,13 +429,11 @@ fun HistorialFlushingScreen(
                 if (lista.isEmpty()) {
 
                     Text(
-                        text = "No existen registros de flushing para el período seleccionado.",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "No existen registros de flushing para el período seleccionado."
                     )
 
                 } else {
 
-                    // Historial desplazable.
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
@@ -415,7 +447,6 @@ fun HistorialFlushingScreen(
                             key = { it.id }
                         ) { registro ->
 
-                            // Ubicar granja, galpón y línea.
                             val linea = listaLineas.find {
                                 it.id == registro.lineaId
                             }
@@ -428,7 +459,7 @@ fun HistorialFlushingScreen(
                                 it.id == galpon?.granjaId
                             }
 
-                            val nombreOperario =
+                            val operario =
                                 listaUsuarios[registro.usuarioId]?.nombre
                                     ?: "Operario no disponible"
 
@@ -440,7 +471,20 @@ fun HistorialFlushingScreen(
                                     ?: "Galpón no disponible",
                                 linea = linea?.nombre
                                     ?: "Línea no disponible",
-                                operario = nombreOperario
+                                operario = operario,
+                                onEditar = {
+
+                                    nuevaObservacion = registro.observacion
+                                    errorDialogo = null
+                                    mensajeResultado = null
+                                    registroEditar = registro
+                                },
+                                onEliminar = {
+
+                                    errorDialogo = null
+                                    mensajeResultado = null
+                                    registroEliminar = registro
+                                }
                             )
                         }
                     }
@@ -448,9 +492,221 @@ fun HistorialFlushingScreen(
             }
         }
     }
+
+    // VENTANA DE EDICIÓN.
+    val seleccionadoEditar = registroEditar
+
+    if (seleccionadoEditar != null) {
+
+        AlertDialog(
+            onDismissRequest = {
+                if (!procesando) {
+                    registroEditar = null
+                }
+            },
+            title = {
+                Text("Editar observación")
+            },
+            text = {
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+
+                    Text(
+                        "Registro N.º ${seleccionadoEditar.id}"
+                    )
+
+                    OutlinedTextField(
+                        value = nuevaObservacion,
+                        onValueChange = {
+                            nuevaObservacion = it
+                            errorDialogo = null
+                        },
+                        label = {
+                            Text("Observación")
+                        },
+                        minLines = 3,
+                        maxLines = 5,
+                        enabled = !procesando,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (errorDialogo != null) {
+                        Text(
+                            text = errorDialogo.orEmpty(),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+
+                TextButton(
+                    enabled = !procesando,
+                    onClick = {
+
+                        if (
+                            !flushingViewModel.observacionValida(
+                                nuevaObservacion
+                            )
+                        ) {
+                            errorDialogo =
+                                "La observación no puede estar vacía."
+                        } else {
+
+                            procesando = true
+                            errorDialogo = null
+
+                            scope.launch {
+                                try {
+
+                                    val actualizado =
+                                        flushingViewModel
+                                            .actualizarObservacionFlushing(
+                                                flushingId =
+                                                    seleccionadoEditar.id,
+                                                observacion =
+                                                    nuevaObservacion
+                                            )
+
+                                    if (actualizado) {
+                                        revision++
+                                        registroEditar = null
+                                        mensajeResultado =
+                                            "Observación actualizada correctamente."
+                                    } else {
+                                        errorDialogo =
+                                            "No se encontró el registro."
+                                    }
+
+                                } catch (e: Exception) {
+                                    errorDialogo =
+                                        "No se pudo actualizar la observación."
+                                } finally {
+                                    procesando = false
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Text(
+                        if (procesando) "Guardando..." else "Guardar"
+                    )
+                }
+            },
+            dismissButton = {
+
+                TextButton(
+                    enabled = !procesando,
+                    onClick = {
+                        registroEditar = null
+                    }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // VENTANA DE ELIMINACIÓN.
+    val seleccionadoEliminar = registroEliminar
+
+    if (seleccionadoEliminar != null) {
+
+        AlertDialog(
+            onDismissRequest = {
+                if (!procesando) {
+                    registroEliminar = null
+                }
+            },
+            title = {
+                Text("Eliminar registro")
+            },
+            text = {
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+
+                    Text(
+                        "¿Desea eliminar el registro N.º ${seleccionadoEliminar.id}?"
+                    )
+
+                    Text(
+                        "Esta acción eliminará el registro de flushing y no se puede deshacer."
+                    )
+
+                    if (errorDialogo != null) {
+                        Text(
+                            text = errorDialogo.orEmpty(),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+
+                TextButton(
+                    enabled = !procesando,
+                    onClick = {
+
+                        procesando = true
+                        errorDialogo = null
+
+                        scope.launch {
+                            try {
+
+                                val eliminado =
+                                    flushingViewModel.eliminarFlushing(
+                                        seleccionadoEliminar.id
+                                    )
+
+                                if (eliminado) {
+                                    revision++
+                                    registroEliminar = null
+                                    mensajeResultado =
+                                        "Registro eliminado correctamente."
+                                } else {
+                                    errorDialogo =
+                                        "No se encontró el registro."
+                                }
+
+                            } catch (e: Exception) {
+                                errorDialogo =
+                                    "No se pudo eliminar el registro."
+                            } finally {
+                                procesando = false
+                            }
+                        }
+                    }
+                ) {
+                    Text(
+                        text = if (procesando) {
+                            "Eliminando..."
+                        } else {
+                            "Eliminar"
+                        },
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+
+                TextButton(
+                    enabled = !procesando,
+                    onClick = {
+                        registroEliminar = null
+                    }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
 
-// SELECTOR DE MESES O DÍAS
+// SELECTOR DE MESES Y DÍAS.
 @Composable
 private fun SelectorOpciones(
     titulo: String,
@@ -505,14 +761,16 @@ private fun SelectorOpciones(
     }
 }
 
-// DETALLE DE CADA REGISTRO
+// TARJETA DE CADA REGISTRO.
 @Composable
 private fun TarjetaHistorialFlushing(
     registro: Flushing,
     granja: String,
     galpon: String,
     linea: String,
-    operario: String
+    operario: String,
+    onEditar: () -> Unit,
+    onEliminar: () -> Unit
 ) {
 
     Card(
@@ -557,6 +815,29 @@ private fun TarjetaHistorialFlushing(
                 text = registro.observacion,
                 style = MaterialTheme.typography.bodyMedium
             )
+
+            // BOTONES EXCLUSIVOS DEL SUPERVISOR.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                BotonAzulAnimado(
+                    texto = "Editar",
+                    onClick = onEditar,
+                    modifier = Modifier.weight(1f)
+                )
+
+                OutlinedButton(
+                    onClick = onEliminar,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "Eliminar",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
         }
     }
 }

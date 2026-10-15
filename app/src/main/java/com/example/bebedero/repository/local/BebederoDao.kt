@@ -44,9 +44,22 @@ interface BebederoDao {
 
     // REGISTROS DE FLUSHING - HU-07
 
+    // CREATE: Registrar flushing
     @Insert
     suspend fun guardarFlushing(flushing: FlushingEntity): Long
 
+    // READ: Consultar registros
     @Query("SELECT * FROM flushings ORDER BY id DESC")
     suspend fun obtenerFlushings(): List<FlushingEntity>
+
+    // UPDATE: Editar únicamente la observación
+    @Query("UPDATE flushings SET observacion = :observacion WHERE id = :flushingId")
+    suspend fun actualizarObservacionFlushing(
+        flushingId: Int,
+        observacion: String
+    ): Int
+
+    // DELETE: Eliminar un registro por su identificador
+    @Query("DELETE FROM flushings WHERE id = :flushingId")
+    suspend fun eliminarFlushing(flushingId: Int): Int
 }
