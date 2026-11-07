@@ -16,6 +16,10 @@ import com.example.bebedero.repository.local.BebederoDao
 import com.example.bebedero.repository.local.BebederoDatabase
 import com.example.bebedero.repository.local.aDominio
 import com.example.bebedero.repository.local.aEntity
+import com.example.bebedero.repository.remote.ActualizarTemperaturaRequest
+import com.example.bebedero.repository.remote.InfraestructuraApiService
+import com.example.bebedero.repository.remote.RetrofitClient
+import com.example.bebedero.repository.remote.aDominio
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -36,13 +40,17 @@ import java.util.Locale
  */
 class BebederoRepository(
     private val api: ApiSimulada = ApiSimulada(),
+    private val remoteApi: InfraestructuraApiService = RetrofitClient.infraestructura,
     private val dao: BebederoDao =
         BebederoDatabase.instancia.bebederoDao()
 ) {
 
+    // Granjas, galpones y lineas ahora vienen de ms-infraestructura (Spring Boot).
+    // Si el microservicio no responde (sin conexion, apagado, etc.), se cae
+    // al respaldo local en Room, igual que antes con la API simulada.
     suspend fun obtenerGranjas(): List<Granja> =
         try {
-            val granjas = api.obtenerGranjas()
+            val granjas = remoteApi.obtenerGranjas().map { it.aDominio() }
 
             dao.guardarGranjas(
                 granjas.map { it.aEntity() }
@@ -60,7 +68,8 @@ class BebederoRepository(
         granjaId: Int
     ): List<Galpon> =
         try {
-            val galpones = api.obtenerGalpones(granjaId)
+            val galpones = remoteApi.obtenerGalpones(granjaId.toLong())
+                .map { it.aDominio() }
 
             dao.guardarGalpones(
                 galpones.map { it.aEntity() }
@@ -74,7 +83,7 @@ class BebederoRepository(
 
     suspend fun obtenerGalpon(id: Int): Galpon =
         try {
-            val galpon = api.obtenerGalpon(id)
+            val galpon = remoteApi.obtenerGalpon(id.toLong()).aDominio()
 
             dao.guardarGalpones(
                 listOf(galpon.aEntity())
@@ -89,7 +98,8 @@ class BebederoRepository(
         galponId: Int
     ): List<LineaBebedero> =
         try {
-            val lineas = api.obtenerLineas(galponId)
+            val lineas = remoteApi.obtenerLineas(galponId.toLong())
+                .map { it.aDominio() }
 
             dao.guardarLineas(
                 lineas.map { it.aEntity() }
@@ -110,7 +120,7 @@ class BebederoRepository(
 
     suspend fun obtenerTodasLasLineas(): List<LineaBebedero> =
         try {
-            val lineas = api.obtenerTodasLasLineas()
+            val lineas = remoteApi.obtenerTodasLasLineas().map { it.aDominio() }
 
             dao.guardarLineas(
                 lineas.map { it.aEntity() }
@@ -125,10 +135,17 @@ class BebederoRepository(
     suspend fun obtenerAlertasActivas(): List<Alerta> =
         api.obtenerAlertasActivas()
 
+    // Historial real desde ms-infraestructura. No hay cache local para esto
+    // (no existe tabla de mediciones en Room), asi que si falla la conexion
+    // se devuelve una lista vacia en vez de reventar la pantalla.
     suspend fun obtenerHistorial(
         lineaId: Int
     ): List<MedicionTemperatura> =
-        api.obtenerHistorial(lineaId)
+        try {
+            remoteApi.obtenerHistorial(lineaId.toLong()).map { it.aDominio() }
+        } catch (e: Exception) {
+            emptyList()
+        }
 
     // CONSULTAR REGISTROS REALES DESDE ROOM
     suspend fun obtenerFlushings(): List<Flushing> =
@@ -162,8 +179,25 @@ class BebederoRepository(
             id = idGenerado.toInt()
         )
 
-        // Mantener la lógica actual de temperaturas.
-        api.marcarFlushingRealizado(lineaId, fechaHora)
+        // Al hacer flushing, la linea vuelve a una temperatura Normal.
+        // Esto ahora se refleja de verdad en ms-infraestructura; si el
+        // microservicio no responde, el flushing igual queda guardado
+        // en Room (ver arriba), solo no se alcanza a resetear la linea.
+        try {
+            remoteApi.actualizarTemperatura(
+                lineaId.toLong(),
+                ActualizarTemperaturaRequest(
+                    temperatura = 18.0,
+                    fechaHora = fechaHora
+                )
+            )
+        } catch (e: Exception) {
+            Log.e(
+                "Bebedero",
+                "No se pudo resetear la temperatura en ms-infraestructura",
+                e
+            )
+        }
 
         // RF-12: notificación exclusiva del Supervisor.
         try {

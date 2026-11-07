@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Permite trafico HTTP (sin cifrar) solo hacia los microservicios
+         propios en desarrollo: 127.0.0.1 es con lo que trabajamos via
+         "adb reverse" (tunel directo emulador<->computador). Se deja
+         tambien 10.0.2.2 (la IP clasica del host visto desde el emulador)
+         como respaldo por si se prueba sin el tunel. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>
