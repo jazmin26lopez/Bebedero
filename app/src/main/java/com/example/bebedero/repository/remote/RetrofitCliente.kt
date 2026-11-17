@@ -55,4 +55,22 @@ object RetrofitCliente {
             InfraestructuraApiService::class.java
         )
     }
+
+    // ==========================================
+    // API EXTERNA - CLIMA (Open-Meteo, no es un microservicio propio)
+    // ==========================================
+
+    private val retrofitClima: Retrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://api.open-meteo.com/")
+            .client(clienteHttp)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    val climaApi: ClimaApiService by lazy {
+        retrofitClima.create(
+            ClimaApiService::class.java
+        )
+    }
 }
