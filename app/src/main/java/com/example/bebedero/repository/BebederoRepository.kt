@@ -6,6 +6,7 @@ import android.util.Log
 import com.example.bebedero.BebederoApp
 import com.example.bebedero.NotificacionesBebedero
 import com.example.bebedero.model.Alerta
+import com.example.bebedero.model.EstadoTemperatura
 import com.example.bebedero.model.Flushing
 import com.example.bebedero.model.Galpon
 import com.example.bebedero.model.Granja
@@ -16,6 +17,9 @@ import com.example.bebedero.repository.local.BebederoDao
 import com.example.bebedero.repository.local.BebederoDatabase
 import com.example.bebedero.repository.local.aDominio
 import com.example.bebedero.repository.local.aEntity
+import com.example.bebedero.repository.remote.ActualizarFlushingRequest
+import com.example.bebedero.repository.remote.CrearFlushingRequest
+import com.example.bebedero.repository.remote.RetrofitCliente
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -23,16 +27,29 @@ import java.util.Locale
 /**
  * Repositorio principal de Bebedero.
  *
- * Conserva:
- * - API simulada.
- * - Almacenamiento local con Room.
- * - Consulta de granjas, galpones y líneas.
- * - Registro e historial de flushing.
- * - Notificaciones según el rol seleccionado.
+ * ms-infraestructura:
+ * - Granjas
+ * - Galpones
+ * - Lineas
+ * - Temperaturas actuales
+ * - Historial de mediciones
  *
- * Agrega:
- * - Editar observación de flushing.
- * - Eliminar registro de flushing.
+ * ms-flushing:
+ * - Consultar
+ * - Registrar
+ * - Editar observacion
+ * - Eliminar
+ *
+ * Alertas:
+ * - Calculadas desde los estados reales de las lineas.
+ *
+ * Room:
+ * - Respaldo para consultas existentes.
+ *
+ * API simulada:
+ * - Usuarios.
+ * - Logica local de temperatura posterior al flushing,
+ *   pendiente de reemplazar por una operacion real.
  */
 class BebederoRepository(
     private val api: ApiSimulada = ApiSimulada(),
@@ -40,63 +57,148 @@ class BebederoRepository(
         BebederoDatabase.instancia.bebederoDao()
 ) {
 
+    // ==========================================
+    // GRANJAS
+    // ==========================================
+
     suspend fun obtenerGranjas(): List<Granja> =
         try {
-            val granjas = api.obtenerGranjas()
+            val respuesta =
+                RetrofitCliente.infraestructuraApi.obtenerGranjas()
+
+            val granjas = respuesta.map { dto ->
+                Granja(
+                    id = dto.id,
+                    nombre = dto.nombre
+                )
+            }
 
             dao.guardarGranjas(
                 granjas.map { it.aEntity() }
             )
 
             granjas
+
         } catch (e: Exception) {
-            dao.obtenerGranjas().map { it.aDominio() }
+            Log.e(
+                "Bebedero",
+                "Error consultando granjas desde Oracle",
+                e
+            )
+
+            dao.obtenerGranjas()
+                .map { it.aDominio() }
         }
 
     suspend fun obtenerGranja(id: Int): Granja =
         obtenerGranjas().first { it.id == id }
 
+    // ==========================================
+    // GALPONES
+    // ==========================================
+
     suspend fun obtenerGalpones(
         granjaId: Int
     ): List<Galpon> =
         try {
-            val galpones = api.obtenerGalpones(granjaId)
+            val respuesta =
+                RetrofitCliente.infraestructuraApi.obtenerGalpones()
+
+            val galpones = respuesta
+                .filter { it.granjaId == granjaId }
+                .map { dto ->
+                    Galpon(
+                        id = dto.id,
+                        granjaId = dto.granjaId,
+                        nombre = dto.nombre
+                    )
+                }
 
             dao.guardarGalpones(
                 galpones.map { it.aEntity() }
             )
 
             galpones
+
         } catch (e: Exception) {
+            Log.e(
+                "Bebedero",
+                "Error consultando galpones desde Oracle",
+                e
+            )
+
             dao.obtenerGalpones(granjaId)
                 .map { it.aDominio() }
         }
 
     suspend fun obtenerGalpon(id: Int): Galpon =
         try {
-            val galpon = api.obtenerGalpon(id)
+            val respuesta =
+                RetrofitCliente.infraestructuraApi.obtenerGalpones()
+
+            val dto = respuesta.first { it.id == id }
+
+            val galpon = Galpon(
+                id = dto.id,
+                granjaId = dto.granjaId,
+                nombre = dto.nombre
+            )
 
             dao.guardarGalpones(
                 listOf(galpon.aEntity())
             )
 
             galpon
+
         } catch (e: Exception) {
+            Log.e(
+                "Bebedero",
+                "Error consultando galpon $id desde Oracle",
+                e
+            )
+
             dao.obtenerGalpon(id)?.aDominio() ?: throw e
         }
+
+    // ==========================================
+    // LINEAS DE BEBEDEROS
+    // ==========================================
 
     suspend fun obtenerLineas(
         galponId: Int
     ): List<LineaBebedero> =
         try {
-            val lineas = api.obtenerLineas(galponId)
+            val respuesta =
+                RetrofitCliente.infraestructuraApi.obtenerLineas()
+
+            val lineas = respuesta
+                .filter { it.galponId == galponId }
+                .map { dto ->
+                    LineaBebedero(
+                        id = dto.id,
+                        galponId = dto.galponId,
+                        nombre = dto.nombre,
+                        temperaturaActual = dto.temperaturaActual,
+                        fechaActualizacion = dto.fechaActualizacion,
+                        estado = EstadoTemperatura.valueOf(
+                            dto.estado.uppercase(Locale.ROOT)
+                        )
+                    )
+                }
 
             dao.guardarLineas(
                 lineas.map { it.aEntity() }
             )
 
             lineas
+
         } catch (e: Exception) {
+            Log.e(
+                "Bebedero",
+                "Error consultando lineas desde Oracle",
+                e
+            )
+
             dao.obtenerLineas(galponId)
                 .map { it.aDominio() }
         }
@@ -110,32 +212,131 @@ class BebederoRepository(
 
     suspend fun obtenerTodasLasLineas(): List<LineaBebedero> =
         try {
-            val lineas = api.obtenerTodasLasLineas()
+            val respuesta =
+                RetrofitCliente.infraestructuraApi.obtenerLineas()
+
+            val lineas = respuesta.map { dto ->
+                LineaBebedero(
+                    id = dto.id,
+                    galponId = dto.galponId,
+                    nombre = dto.nombre,
+                    temperaturaActual = dto.temperaturaActual,
+                    fechaActualizacion = dto.fechaActualizacion,
+                    estado = EstadoTemperatura.valueOf(
+                        dto.estado.uppercase(Locale.ROOT)
+                    )
+                )
+            }
 
             dao.guardarLineas(
                 lineas.map { it.aEntity() }
             )
 
             lineas
+
         } catch (e: Exception) {
+            Log.e(
+                "Bebedero",
+                "Error consultando todas las lineas desde Oracle",
+                e
+            )
+
             dao.obtenerTodasLasLineas()
                 .map { it.aDominio() }
         }
 
-    suspend fun obtenerAlertasActivas(): List<Alerta> =
-        api.obtenerAlertasActivas()
+    // ==========================================
+    // ALERTAS ACTIVAS
+    // DATOS DE ORACLE
+    // ==========================================
+
+    suspend fun obtenerAlertasActivas(): List<Alerta> {
+
+        val lineas = obtenerTodasLasLineas()
+
+        return lineas
+            .filter {
+                it.estado != EstadoTemperatura.NORMAL
+            }
+            .mapIndexed { index, linea ->
+                Alerta(
+                    id = index + 1,
+                    lineaId = linea.id,
+                    fechaHora = linea.fechaActualizacion,
+                    estado = linea.estado,
+                    activa = true
+                )
+            }
+    }
+
+    // ==========================================
+    // HISTORIAL DE TEMPERATURAS
+    // ==========================================
 
     suspend fun obtenerHistorial(
         lineaId: Int
-    ): List<MedicionTemperatura> =
-        api.obtenerHistorial(lineaId)
+    ): List<MedicionTemperatura> {
 
-    // CONSULTAR REGISTROS REALES DESDE ROOM
+        try {
+            val respuesta =
+                RetrofitCliente.infraestructuraApi
+                    .obtenerHistorialTemperaturas(lineaId)
+
+            return respuesta.map { dto ->
+                MedicionTemperatura(
+                    id = dto.id,
+                    lineaId = dto.lineaId,
+                    temperatura = dto.temperatura,
+                    fechaHora = dto.fechaHora
+                )
+            }
+
+        } catch (e: Exception) {
+            Log.e(
+                "Bebedero",
+                "Error consultando historial de linea $lineaId",
+                e
+            )
+
+            throw e
+        }
+    }
+
+    // ==========================================
+    // FLUSHING - GET
+    // ==========================================
+
     suspend fun obtenerFlushings(): List<Flushing> =
-        dao.obtenerFlushings()
-            .map { it.aDominio() }
+        try {
+            val registros =
+                RetrofitCliente.flushingApi.listar()
 
-    // REGISTRAR FLUSHING
+            registros.map { dto ->
+                Flushing(
+                    id = dto.id.toInt(),
+                    lineaId = dto.lineaId.toInt(),
+                    usuarioId = dto.usuarioId.toInt(),
+                    fechaHora = dto.fechaHora,
+                    observacion = dto.observacion ?: "",
+                    fotoUri = dto.fotoUri
+                )
+            }
+
+        } catch (e: Exception) {
+            Log.e(
+                "Bebedero",
+                "Error consultando flushings desde Oracle",
+                e
+            )
+
+            dao.obtenerFlushings()
+                .map { it.aDominio() }
+        }
+
+    // ==========================================
+    // FLUSHING - POST
+    // ==========================================
+
     suspend fun registrarFlushing(
         lineaId: Int,
         usuarioId: Int,
@@ -144,28 +345,34 @@ class BebederoRepository(
         fotoUri: String? = null
     ): Flushing {
 
-        val nuevoFlushing = Flushing(
-            id = 0,
-            lineaId = lineaId,
-            usuarioId = usuarioId,
+        val request = CrearFlushingRequest(
+            lineaId = lineaId.toLong(),
+            usuarioId = usuarioId.toLong(),
             fechaHora = fechaHora,
             observacion = observacion,
             fotoUri = fotoUri
         )
 
-        // Guardar en Room.
-        val idGenerado = dao.guardarFlushing(
-            nuevoFlushing.aEntity()
+        val respuesta =
+            RetrofitCliente.flushingApi.crear(request)
+
+        val flushingGuardado = Flushing(
+            id = respuesta.id.toInt(),
+            lineaId = respuesta.lineaId.toInt(),
+            usuarioId = respuesta.usuarioId.toInt(),
+            fechaHora = respuesta.fechaHora,
+            observacion = respuesta.observacion ?: "",
+            fotoUri = respuesta.fotoUri
         )
 
-        val flushingGuardado = nuevoFlushing.copy(
-            id = idGenerado.toInt()
+        // Mantener temporalmente la logica local
+        // de temperatura de la aplicacion original.
+        api.marcarFlushingRealizado(
+            lineaId,
+            fechaHora
         )
 
-        // Mantener la lógica actual de temperaturas.
-        api.marcarFlushingRealizado(lineaId, fechaHora)
-
-        // RF-12: notificación exclusiva del Supervisor.
+        // RF-12: notificacion exclusiva del Supervisor.
         try {
             val context = BebederoApp.instancia
 
@@ -186,7 +393,7 @@ class BebederoRepository(
         } catch (e: Exception) {
             Log.e(
                 "Bebedero",
-                "No se pudo actualizar la notificación de flushing",
+                "Error actualizando notificacion de flushing",
                 e
             )
         }
@@ -194,36 +401,62 @@ class BebederoRepository(
         return flushingGuardado
     }
 
-    // NUEVO: EDITAR OBSERVACIÓN DE FLUSHING
+    // ==========================================
+    // FLUSHING - PUT
+    // ==========================================
+
     suspend fun actualizarObservacionFlushing(
         flushingId: Int,
         observacion: String
     ): Boolean {
 
         require(observacion.isNotBlank()) {
-            "La observación no puede estar vacía."
+            "La observacion no puede estar vacia."
         }
 
-        val filasActualizadas =
-            dao.actualizarObservacionFlushing(
-                flushingId = flushingId,
-                observacion = observacion.trim()
+        val request = ActualizarFlushingRequest(
+            observacion = observacion.trim()
+        )
+
+        return try {
+            RetrofitCliente.flushingApi.actualizar(
+                id = flushingId.toLong(),
+                request = request
             )
 
-        return filasActualizadas > 0
+            true
+
+        } catch (e: retrofit2.HttpException) {
+            if (e.code() == 404) {
+                false
+            } else {
+                throw e
+            }
+        }
     }
 
-    // NUEVO: ELIMINAR REGISTRO DE FLUSHING
+    // ==========================================
+    // FLUSHING - DELETE
+    // ==========================================
+
     suspend fun eliminarFlushing(
         flushingId: Int
     ): Boolean {
 
-        val filasEliminadas =
-            dao.eliminarFlushing(flushingId)
+        val respuesta =
+            RetrofitCliente.flushingApi.eliminar(
+                flushingId.toLong()
+            )
 
-        if (filasEliminadas > 0) {
+        if (respuesta.code() == 404) {
+            return false
+        }
 
-            // Refrescar el contador si está activo el Supervisor.
+        if (!respuesta.isSuccessful) {
+            throw retrofit2.HttpException(respuesta)
+        }
+
+        try {
             val context = BebederoApp.instancia
 
             val preferencias = context.getSharedPreferences(
@@ -235,25 +468,24 @@ class BebederoRepository(
                 preferencias.getString("rol_actual", "") ==
                 "supervisor"
             ) {
-                try {
-                    actualizarNotificacionFlushing()
-                } catch (e: Exception) {
-                    Log.e(
-                        "Bebedero",
-                        "No se pudo actualizar el contador de flushing",
-                        e
-                    )
-                }
+                actualizarNotificacionFlushing()
             }
+
+        } catch (e: Exception) {
+            Log.e(
+                "Bebedero",
+                "Error actualizando contador de flushing",
+                e
+            )
         }
 
-        return filasEliminadas > 0
+        return true
     }
 
-    /**
-     * Calcula los flushings del día usando Room.
-     * Actualiza siempre la misma notificación.
-     */
+    // ==========================================
+    // NOTIFICACIONES
+    // ==========================================
+
     suspend fun actualizarNotificacionFlushing() {
 
         val flushings = obtenerFlushings()
@@ -287,6 +519,10 @@ class BebederoRepository(
             cantidadHoy = cantidadHoy
         )
     }
+
+    // ==========================================
+    // USUARIOS
+    // ==========================================
 
     suspend fun obtenerUsuario(id: Int): Usuario =
         api.obtenerUsuario(id)
