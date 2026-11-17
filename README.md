@@ -72,6 +72,21 @@ Ambos deben estar corriendo (y conectados a Oracle) para que la app muestre dato
 
 **Open-Meteo** (`api.open-meteo.com`) — temperatura ambiente real de la zona, mostrada en la pantalla de Granjas. No requiere API key, por eso se eligió: evita tener que guardar una clave secreta en un repositorio público. Es independiente de los microservicios propios — si el clima falla, no afecta al resto de la pantalla.
 
+## Endpoints utilizados
+
+**API externa — Open-Meteo:**
+- `GET https://api.open-meteo.com/v1/forecast?latitude=-33.45&longitude=-70.66&current=temperature_2m`
+
+**Microservicio `ms-infraestructura` (puerto 8081):**
+- `GET /api/granjas`, `GET/POST/PUT/DELETE /api/galpones`, `GET/POST/PUT/DELETE /api/lineas`
+- `GET /api/lineas/{id}/mediciones` (historial de temperaturas)
+
+**Microservicio `ms-flushing` (puerto 8082):**
+- `GET /api/flushings` (lista, filtrable por `lineaId`)
+- `POST /api/flushings` (crear) · `PUT /api/flushings/{id}` (editar observación) · `DELETE /api/flushings/{id}` (eliminar)
+
+Detalle completo de cada endpoint (bodies, respuestas) en el [README de cada microservicio](https://github.com/jazmin26lopez/app-movil-backend).
+
 ## Conexión con los microservicios (red)
 
 La app se conecta a los microservicios por IP, configurada en:

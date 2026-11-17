@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    jacoco
 }
 
 val localProperties = Properties().apply {
@@ -92,4 +93,37 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:3.0.0")
 
 
+}
+
+// Reporte de cobertura de pruebas unitarias (IE3.2.1: >=80% de ViewModel/Repository),
+// acotado a esos paquetes porque son los que exige la rubrica - el resto (UI, model,
+// DTOs/entidades, clases de Android) no es "logica" y diluiria el porcentaje real.
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("testDebugUnitTest")
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+
+    val fileFilter = listOf(
+        "**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*"
+    )
+
+    val debugTree = fileTree("${layout.buildDirectory.get()}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
+        include("com/example/bebedero/viewmodel/**")
+        include("com/example/bebedero/repository/BebederoRepository.class")
+        exclude(fileFilter)
+    }
+
+    sourceDirectories.setFrom(files("src/main/java"))
+    classDirectories.setFrom(files(debugTree))
+    executionData.setFrom(files("${layout.buildDirectory.get()}/jacoco/testDebugUnitTest.exec"))
+}
+
+tasks.withType<Test> {
+    extensions.configure<JacocoTaskExtension> {
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
 }
