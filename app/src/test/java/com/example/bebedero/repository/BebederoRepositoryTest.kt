@@ -15,6 +15,7 @@ import com.example.bebedero.repository.local.GalponEntity
 import com.example.bebedero.repository.local.GranjaEntity
 import com.example.bebedero.repository.local.LineaBebederoEntity
 import com.example.bebedero.repository.remote.ActualizarFlushingRequest
+import com.example.bebedero.repository.remote.ActualizarTemperaturaRequest
 import com.example.bebedero.repository.remote.CrearFlushingRequest
 import com.example.bebedero.repository.remote.FlushingApiService
 import com.example.bebedero.repository.remote.FlushingDto
@@ -289,7 +290,6 @@ class BebederoRepositoryTest {
     fun `registrarFlushing devuelve el flushing creado por el microservicio`() = runTest {
         val request = CrearFlushingRequest(6L, 1L, "29/09/2026 16:10", "Limpieza ok", null)
         coEvery { flushingApi.crear(request) } returns FlushingDto(10L, 6L, 1L, "29/09/2026 16:10", "Limpieza ok", null)
-        every { api.marcarFlushingRealizado(6, "29/09/2026 16:10") } just Runs
 
         val resultado = repo.registrarFlushing(
             lineaId = 6,
@@ -300,7 +300,41 @@ class BebederoRepositoryTest {
 
         assertEquals(Flushing(10, 6, 1, "29/09/2026 16:10", "Limpieza ok"), resultado)
         coVerify(exactly = 1) { flushingApi.crear(request) }
-        coVerify(exactly = 1) { api.marcarFlushingRealizado(6, "29/09/2026 16:10") }
+    }
+
+    @Test
+    fun `registrarFlushing resetea de verdad la temperatura de la linea en ms-infraestructura`() = runTest {
+        val request = CrearFlushingRequest(6L, 1L, "29/09/2026 16:10", "Limpieza ok", null)
+        coEvery { flushingApi.crear(request) } returns FlushingDto(10L, 6L, 1L, "29/09/2026 16:10", "Limpieza ok", null)
+        coEvery { infraApi.actualizarTemperatura(6, any()) } returns
+            LineaBebederoDto(6, 1, "Linea 6", 18.0, "29/09/2026 16:10", "NORMAL")
+
+        repo.registrarFlushing(
+            lineaId = 6,
+            usuarioId = 1,
+            fechaHora = "29/09/2026 16:10",
+            observacion = "Limpieza ok"
+        )
+
+        coVerify(exactly = 1) {
+            infraApi.actualizarTemperatura(6, ActualizarTemperaturaRequest(18.0, "29/09/2026 16:10"))
+        }
+    }
+
+    @Test
+    fun `registrarFlushing no falla si ms-infraestructura no responde al resetear la temperatura`() = runTest {
+        val request = CrearFlushingRequest(6L, 1L, "29/09/2026 16:10", "Limpieza ok", null)
+        coEvery { flushingApi.crear(request) } returns FlushingDto(10L, 6L, 1L, "29/09/2026 16:10", "Limpieza ok", null)
+        coEvery { infraApi.actualizarTemperatura(any(), any()) } throws RuntimeException("sin conexion")
+
+        val resultado = repo.registrarFlushing(
+            lineaId = 6,
+            usuarioId = 1,
+            fechaHora = "29/09/2026 16:10",
+            observacion = "Limpieza ok"
+        )
+
+        assertEquals(Flushing(10, 6, 1, "29/09/2026 16:10", "Limpieza ok"), resultado)
     }
 
     // ==========================================

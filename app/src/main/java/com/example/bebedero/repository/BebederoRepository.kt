@@ -18,6 +18,7 @@ import com.example.bebedero.repository.local.BebederoDatabase
 import com.example.bebedero.repository.local.aDominio
 import com.example.bebedero.repository.local.aEntity
 import com.example.bebedero.repository.remote.ActualizarFlushingRequest
+import com.example.bebedero.repository.remote.ActualizarTemperaturaRequest
 import com.example.bebedero.repository.remote.CrearFlushingRequest
 import com.example.bebedero.repository.remote.RetrofitCliente
 import java.text.SimpleDateFormat
@@ -365,12 +366,25 @@ class BebederoRepository(
             fotoUri = respuesta.fotoUri
         )
 
-        // Mantener temporalmente la logica local
-        // de temperatura de la aplicacion original.
-        api.marcarFlushingRealizado(
-            lineaId,
-            fechaHora
-        )
+        // Al hacer flushing, la linea vuelve a una temperatura Normal.
+        // Esto se refleja de verdad en ms-infraestructura; si el
+        // microservicio no responde, el flushing igual queda guardado
+        // (ver arriba), solo no se alcanza a resetear la linea.
+        try {
+            RetrofitCliente.infraestructuraApi.actualizarTemperatura(
+                lineaId,
+                ActualizarTemperaturaRequest(
+                    temperatura = 18.0,
+                    fechaHora = fechaHora
+                )
+            )
+        } catch (e: Exception) {
+            Log.e(
+                "Bebedero",
+                "Error reseteando temperatura de la linea $lineaId tras el flushing",
+                e
+            )
+        }
 
         // RF-12: notificacion exclusiva del Supervisor.
         try {

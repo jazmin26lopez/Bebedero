@@ -1,7 +1,9 @@
 
 package com.example.bebedero.repository.remote
 
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.PUT
 import retrofit2.http.Path
 
 data class GranjaDto(
@@ -31,6 +33,11 @@ data class MedicionTemperaturaDto(
     val fechaHora: String
 )
 
+data class ActualizarTemperaturaRequest(
+    val temperatura: Double,
+    val fechaHora: String
+)
+
 interface InfraestructuraApiService {
 
     @GET("api/granjas")
@@ -46,4 +53,10 @@ interface InfraestructuraApiService {
     suspend fun obtenerHistorialTemperaturas(
         @Path("id") lineaId: Int
     ): List<MedicionTemperaturaDto>
+
+    @PUT("api/lineas/{id}")
+    suspend fun actualizarTemperatura(
+        @Path("id") lineaId: Int,
+        @Body request: ActualizarTemperaturaRequest
+    ): LineaBebederoDto
 }
