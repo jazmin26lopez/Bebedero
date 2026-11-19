@@ -1,6 +1,9 @@
 package com.example.bebedero.repository
 
+import android.content.SharedPreferences
 import android.util.Log
+import com.example.bebedero.BebederoApp
+import com.example.bebedero.NotificacionesBebedero
 import com.example.bebedero.model.Alerta
 import com.example.bebedero.model.EstadoTemperatura
 import com.example.bebedero.model.Flushing
@@ -33,6 +36,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
+import io.mockk.verify
 import io.mockk.unmockkAll
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -420,6 +424,156 @@ class BebederoRepositoryTest {
         val resultado = repo.obtenerUsuario(1)
 
         assertEquals(usuario, resultado)
+    }
+
+    // ==========================================
+    // GALPON / LINEAS - caminos de respaldo que faltaban
+    // ==========================================
+
+    @Test
+    fun `obtenerGalpon cae al cache cuando Oracle no responde (no solo cuando no encuentra el id)`() = runTest {
+        coEvery { infraApi.obtenerGalpones() } throws RuntimeException("sin conexion")
+        coEvery { dao.obtenerGalpon(5) } returns GalponEntity(5, 1, "Galpon cache")
+
+        val resultado = repo.obtenerGalpon(5)
+
+        assertEquals(Galpon(5, 1, "Galpon cache"), resultado)
+    }
+
+    @Test
+    fun `obtenerLineas cae al cache local si Oracle falla`() = runTest {
+        coEvery { infraApi.obtenerLineas() } throws RuntimeException("sin conexion")
+        coEvery { dao.obtenerLineas(1) } returns listOf(
+            LineaBebederoEntity(1, 1, "Linea cache", 18.0, "f", "NORMAL")
+        )
+
+        val resultado = repo.obtenerLineas(1)
+
+        assertEquals(listOf(LineaBebedero(1, 1, "Linea cache", 18.0, "f", EstadoTemperatura.NORMAL)), resultado)
+    }
+
+    @Test
+    fun `obtenerLinea encuentra la linea exitosamente sin necesitar el cache`() = runTest {
+        coEvery { infraApi.obtenerLineas() } returns listOf(
+            LineaBebederoDto(7, 1, "Linea 7", 18.0, "f", "NORMAL")
+        )
+        coEvery { dao.guardarLineas(any()) } just Runs
+
+        val resultado = repo.obtenerLinea(7)
+
+        assertEquals(LineaBebedero(7, 1, "Linea 7", 18.0, "f", EstadoTemperatura.NORMAL), resultado)
+    }
+
+    // ==========================================
+    // FLUSHING - rama null de observacion (?: "")
+    // ==========================================
+
+    @Test
+    fun `obtenerFlushings deja la observacion como texto vacio cuando el microservicio manda null`() = runTest {
+        coEvery { flushingApi.listar(null) } returns listOf(
+            FlushingDto(1L, 6L, 1L, "f", null, null)
+        )
+
+        val resultado = repo.obtenerFlushings()
+
+        assertEquals("", resultado[0].observacion)
+    }
+
+    @Test
+    fun `registrarFlushing deja la observacion como texto vacio cuando el microservicio responde null`() = runTest {
+        val request = CrearFlushingRequest(6L, 1L, "f", "obs", null)
+        coEvery { flushingApi.crear(request) } returns FlushingDto(10L, 6L, 1L, "f", null, null)
+        coEvery { infraApi.actualizarTemperatura(any(), any()) } returns
+            LineaBebederoDto(6, 1, "L", 18.0, "f", "NORMAL")
+
+        val resultado = repo.registrarFlushing(6, 1, "f", "obs")
+
+        assertEquals("", resultado.observacion)
+    }
+
+    // ==========================================
+    // NOTIFICACIONES - rol Supervisor vs Operario
+    // ==========================================
+
+    private fun simularRolActual(rol: String): BebederoApp {
+        mockkObject(BebederoApp.Companion)
+        val appMock = mockk<BebederoApp>(relaxed = true)
+        every { BebederoApp.instancia } returns appMock
+
+        val prefsMock = mockk<SharedPreferences>()
+        every { appMock.getSharedPreferences(any(), any()) } returns prefsMock
+        every { prefsMock.getString("rol_actual", "") } returns rol
+
+        mockkObject(NotificacionesBebedero)
+        every { NotificacionesBebedero.notificarFlushings(any(), any()) } just Runs
+
+        return appMock
+    }
+
+    @Test
+    fun `registrarFlushing notifica cuando el rol activo es supervisor`() = runTest {
+        val request = CrearFlushingRequest(6L, 1L, "f", "obs", null)
+        coEvery { flushingApi.crear(request) } returns FlushingDto(10L, 6L, 1L, "f", "obs", null)
+        coEvery { infraApi.actualizarTemperatura(any(), any()) } returns
+            LineaBebederoDto(6, 1, "L", 18.0, "f", "NORMAL")
+        coEvery { flushingApi.listar(null) } returns emptyList()
+        simularRolActual("supervisor")
+
+        repo.registrarFlushing(6, 1, "f", "obs")
+
+        verify(exactly = 1) { NotificacionesBebedero.notificarFlushings(any(), any()) }
+    }
+
+    @Test
+    fun `registrarFlushing no notifica cuando el rol activo no es supervisor`() = runTest {
+        val request = CrearFlushingRequest(6L, 1L, "f", "obs", null)
+        coEvery { flushingApi.crear(request) } returns FlushingDto(10L, 6L, 1L, "f", "obs", null)
+        coEvery { infraApi.actualizarTemperatura(any(), any()) } returns
+            LineaBebederoDto(6, 1, "L", 18.0, "f", "NORMAL")
+        simularRolActual("operario")
+
+        repo.registrarFlushing(6, 1, "f", "obs")
+
+        verify(exactly = 0) { NotificacionesBebedero.notificarFlushings(any(), any()) }
+    }
+
+    @Test
+    fun `eliminarFlushing notifica cuando el rol activo es supervisor`() = runTest {
+        coEvery { flushingApi.eliminar(1L) } returns Response.success(204, Unit)
+        coEvery { flushingApi.listar(null) } returns emptyList()
+        simularRolActual("supervisor")
+
+        repo.eliminarFlushing(1)
+
+        verify(exactly = 1) { NotificacionesBebedero.notificarFlushings(any(), any()) }
+    }
+
+    @Test
+    fun `eliminarFlushing no notifica cuando el rol activo no es supervisor`() = runTest {
+        coEvery { flushingApi.eliminar(1L) } returns Response.success(204, Unit)
+        simularRolActual("operario")
+
+        repo.eliminarFlushing(1)
+
+        verify(exactly = 0) { NotificacionesBebedero.notificarFlushings(any(), any()) }
+    }
+
+    @Test
+    fun `actualizarNotificacionFlushing cuenta solo los flushings de hoy, sin importar el formato de fecha`() = runTest {
+        val hoy = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).format(java.util.Date())
+        coEvery { flushingApi.listar(null) } returns listOf(
+            FlushingDto(1L, 1L, 1L, "$hoy 10:00", "de hoy", null),
+            FlushingDto(2L, 1L, 1L, "01/01/2000 10:00", "viejo", null)
+        )
+        val appMock = mockk<BebederoApp>(relaxed = true)
+        mockkObject(BebederoApp.Companion)
+        every { BebederoApp.instancia } returns appMock
+        mockkObject(NotificacionesBebedero)
+        every { NotificacionesBebedero.notificarFlushings(any(), any()) } just Runs
+
+        repo.actualizarNotificacionFlushing()
+
+        verify(exactly = 1) { NotificacionesBebedero.notificarFlushings(appMock, 1) }
     }
 
     // ==========================================
