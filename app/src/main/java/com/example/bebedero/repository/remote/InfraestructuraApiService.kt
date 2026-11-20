@@ -5,40 +5,58 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PUT
 import retrofit2.http.Path
-import retrofit2.http.Query
+
+data class GranjaDto(
+    val id: Int,
+    val nombre: String
+)
+
+data class GalponDto(
+    val id: Int,
+    val granjaId: Int,
+    val nombre: String
+)
+
+data class LineaBebederoDto(
+    val id: Int,
+    val galponId: Int,
+    val nombre: String,
+    val temperaturaActual: Double,
+    val fechaActualizacion: String,
+    val estado: String
+)
+
+data class MedicionTemperaturaDto(
+    val id: Int,
+    val lineaId: Int,
+    val temperatura: Double,
+    val fechaHora: String
+)
 
 data class ActualizarTemperaturaRequest(
     val temperatura: Double,
     val fechaHora: String
 )
 
-/**
- * Espejo, lado app, de los endpoints REST expuestos por ms-infraestructura
- * (Spring Boot, puerto 8081). Reemplaza lo que antes resolvia ApiSimulada.
- */
 interface InfraestructuraApiService {
 
     @GET("api/granjas")
     suspend fun obtenerGranjas(): List<GranjaDto>
 
     @GET("api/galpones")
-    suspend fun obtenerGalpones(@Query("granjaId") granjaId: Long): List<GalponDto>
-
-    @GET("api/galpones/{id}")
-    suspend fun obtenerGalpon(@Path("id") id: Long): GalponDto
+    suspend fun obtenerGalpones(): List<GalponDto>
 
     @GET("api/lineas")
-    suspend fun obtenerTodasLasLineas(): List<LineaBebederoDto>
+    suspend fun obtenerLineas(): List<LineaBebederoDto>
 
-    @GET("api/lineas")
-    suspend fun obtenerLineas(@Query("galponId") galponId: Long): List<LineaBebederoDto>
+    @GET("api/lineas/{id}/mediciones")
+    suspend fun obtenerHistorialTemperaturas(
+        @Path("id") lineaId: Int
+    ): List<MedicionTemperaturaDto>
 
     @PUT("api/lineas/{id}")
     suspend fun actualizarTemperatura(
-        @Path("id") lineaId: Long,
-        @Body body: ActualizarTemperaturaRequest
+        @Path("id") lineaId: Int,
+        @Body request: ActualizarTemperaturaRequest
     ): LineaBebederoDto
-
-    @GET("api/lineas/{id}/mediciones")
-    suspend fun obtenerHistorial(@Path("id") lineaId: Long): List<MedicionTemperaturaDto>
 }

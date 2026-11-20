@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bebedero.model.Galpon
 import com.example.bebedero.model.Granja
-import com.example.bebedero.repository.remote.RetrofitClient
+import com.example.bebedero.repository.remote.RetrofitCliente
 import com.example.bebedero.viewmodel.ConsultaViewModel
 
 private fun nombreRol(rol: String) = if (rol == "operario") "Operario" else "Supervisor"
@@ -35,11 +35,11 @@ fun GranjasScreen(
 
     // API externa (Open-Meteo): temperatura ambiente de la zona, para
     // comparar con la del agua. Independiente de granjas/galpones/lineas,
-    // que siguen viniendo de ms-infraestructura — si el clima falla, no
-    // interfiere con el resto de la pantalla.
+    // que siguen viniendo de los microservicios propios - si el clima
+    // falla, no interfiere con el resto de la pantalla.
     val clima by produceState<String?>(initialValue = null, key1 = Unit) {
         value = try {
-            val respuesta = RetrofitClient.clima.obtenerClimaActual()
+            val respuesta = RetrofitCliente.climaApi.obtenerClimaActual()
             "%.1f °C".format(respuesta.current.temperature_2m)
         } catch (e: Exception) {
             null

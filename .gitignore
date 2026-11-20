@@ -9,7 +9,22 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 /build
+**/build/
 /captures
 .externalNativeBuild
 .cxx
+local.properties
+
+# Archivos de compilacion y distribucion
+app/release/
+*.apk
+*.aab
+
+# Claves de firma
+*.jks
+*.keystore
+
+# Configuracion local
+.idea/
+.gradle/
 local.properties
