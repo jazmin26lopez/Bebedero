@@ -21,6 +21,7 @@ app/release/
 *.aab
 
 # Claves de firma
+# (se entregan aparte directamente a la docente, no van en el repositorio)
 *.jks
 *.keystore
 

@@ -78,8 +78,12 @@ Ambos deben estar corriendo (y conectados a Oracle) para que la app muestre dato
 - `GET https://api.open-meteo.com/v1/forecast?latitude=-33.45&longitude=-70.66&current=temperature_2m`
 
 **Microservicio `ms-infraestructura` (puerto 8081):**
-- `GET /api/granjas`, `GET/POST/PUT/DELETE /api/galpones`, `GET/POST/PUT/DELETE /api/lineas`
+- `GET /api/granjas` (lista de granjas)
+- `GET /api/galpones` (lista, filtrable por `?granjaId=`)
+- `GET /api/lineas` (lista, filtrable por `?galponId=`) · `PUT /api/lineas/{id}` (actualiza temperatura y estado)
 - `GET /api/lineas/{id}/mediciones` (historial de temperaturas)
+
+Granjas, Galpones y Líneas son de solo lectura desde la app (se cargan desde Oracle, nunca se crean/editan/eliminan desde la interfaz), por eso no exponen `POST`/`DELETE`.
 
 **Microservicio `ms-flushing` (puerto 8082):**
 - `GET /api/flushings` (lista, filtrable por `lineaId`)
@@ -99,18 +103,30 @@ La app se conecta a los microservicios por IP, configurada en:
 
 ## Pruebas unitarias
 
-45 pruebas con JUnit4 + MockK + `kotlinx-coroutines-test`, cubriendo los dos ViewModel y el Repository:
+57 pruebas con JUnit4 + MockK + `kotlinx-coroutines-test`, cubriendo los dos ViewModel y el Repository:
 
 | Clase | Pruebas | Qué cubre |
 |---|---|---|
 | `FlushingViewModelTest` | 9 | Validación de observación, CRUD de flushing |
 | `ConsultaViewModelTest` | 12 | Consultas, agregación de galpones, orden de eventos críticos |
-| `BebederoRepositoryTest` | 24 | Éxito y respaldo a Room de cada endpoint, códigos HTTP (404 vs otros), validaciones |
+| `BebederoRepositoryTest` | 36 | Éxito y respaldo a Room de cada endpoint, códigos HTTP (404 vs otros), validaciones, notificaciones por rol |
 
 Correrlas:
 ```bash
 ./gradlew.bat :app:testDebugUnitTest
 ```
+
+**Cobertura (JaCoCo)**, medida sobre ViewModels y Repository (el código que exige la rúbrica, 80% mínimo):
+
+```bash
+./gradlew.bat :app:jacocoTestReport
+```
+
+| Módulo | Líneas | Instrucciones | Ramas |
+|---|---:|---:|---:|
+| ViewModels + Repository | 99.4 % | 96.3 % | 86.5 % |
+
+Reporte HTML: `app/build/reports/jacoco/jacocoTestReport/html/index.html` (generado localmente, no se incluye en el repositorio).
 
 ## APK firmado (release)
 
@@ -140,6 +156,14 @@ Correrlas:
 Signer #1 certificate DN: CN=Bryam Arciniegas, OU=DSY1105, O=DuocUC, L=Santiago, ST=RM, C=CL
 Signer #1 certificate SHA-256 digest: 66e38f812d1de763b56abbc1161da2c80e7be21b403d656425894ab2ee76711c
 ```
+
+**Evidencia de los archivos generados:**
+```
+app-release.apk           47.47 MB   20-11-2026 19:40
+bebedero-release.jks       2.68 KB   17-11-2026 12:10
+```
+
+**Nota de entrega:** por indicación de la docente, el `.apk` firmado y el `.jks` no se suben al repositorio (ver `.gitignore`); se entregan directamente junto al .zip del proyecto a través del enlace de AVA del equipo.
 
 ## Tecnologías
 
