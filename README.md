@@ -163,7 +163,9 @@ app-release.apk           47.47 MB   20-11-2026 19:40
 bebedero-release.jks       2.68 KB   17-11-2026 12:10
 ```
 
-**Nota de entrega:** por indicación de la docente, el `.apk` firmado y el `.jks` no se suben al repositorio (ver `.gitignore`); se entregan directamente junto al .zip del proyecto a través del enlace de AVA del equipo.
+**¿Para qué sirve el `.jks`?** Es la llave privada con la que se firmó digitalmente el APK: certifica que el instalador viene realmente de este equipo y no fue alterado después de compilarse. No se necesita "abrirla" para instalar la app (el APK ya viene firmado); sirve como respaldo de verificación y para firmar futuras actualizaciones de la misma app con la misma identidad.
+
+**Nota de entrega:** por indicación de la docente, el `.apk` firmado y el `.jks` no se suben al repositorio (ver `.gitignore`); se entregan directamente junto al .zip del proyecto (no publicados en un repositorio público, al ser el `.jks` una llave privada).
 
 ## Tecnologías
 
